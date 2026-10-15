@@ -352,12 +352,18 @@ a{color:inherit;text-decoration:none}
 .onb{position:fixed;inset:0;z-index:98;display:grid;place-items:center;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px calc(env(safe-area-inset-bottom,0px) + 20px);overflow-y:auto;
   background:var(--splash);transition:opacity .5s}
 .onb.hide{opacity:0;pointer-events:none}
-.onb-card{width:100%;max-width:420px;border-radius:32px;padding:22px 20px 18px;background:var(--glass-strong);display:flex;flex-direction:column;gap:16px;animation:rise .5s ease both}
+.onb-card{width:min(420px, calc(100vw - 32px));min-width:0;border-radius:32px;padding:22px 20px 18px;background:var(--glass-strong);display:flex;flex-direction:column;gap:16px;animation:rise .5s ease both}
 .onb-body{text-align:center;display:flex;flex-direction:column;gap:12px}
 .onb-body h2{margin:0;font:700 28px/1.15 var(--display);letter-spacing:-.02em;text-wrap:balance}
 .onb-body p{margin:0 auto;color:var(--fg2);font-size:16px;max-width:30ch;text-wrap:balance}
 .onb-body .form,.onb-body .seg{margin:0}
 .onb-body .field input{text-align:left}
+.onb-card .rt{min-width:0}.onb-card .t2{overflow:hidden;text-overflow:ellipsis}
+.tpick{display:flex;align-items:center;justify-content:flex-end;gap:2px;flex:1}
+.field .tpick select{flex:none;width:auto;direction:ltr;text-align:center;padding:14px 4px}
+.tpick b{font-weight:600;color:var(--sub)}
+.warn{margin:-6px 6px 14px;padding:10px 14px;border-radius:14px;font-size:14px;background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--text)}
+.add-edit-row{opacity:1}.add-edit-row.off{opacity:.45}
 .onb .lens.big{width:84px;height:84px;border-radius:50%;border:7px solid var(--accent);display:grid;place-items:center;margin:6px auto 4px;animation:focus 1.4s cubic-bezier(.3,1.4,.5,1) both}
 .onb .lens.big svg{width:40px;height:40px;color:var(--accent)}
 .onb-dots{display:flex;gap:6px;justify-content:center}
@@ -455,8 +461,8 @@ a{color:inherit;text-decoration:none}
 .cel-card h2{margin:0 0 8px;font:700 26px/1.15 var(--display);letter-spacing:-.01em;text-wrap:balance}
 .cel-card p{margin:0 0 22px;color:var(--fg2);font-size:16px;text-wrap:balance}
 
-.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translate(-50%,-140%);z-index:90;padding:11px 18px;border-radius:999px;font-weight:600;font-size:15px;transition:transform .4s cubic-bezier(.2,.9,.25,1);max-width:calc(100% - 32px);text-align:center}
-.toast.show{transform:translate(-50%,0)}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translate(-50%,calc(-100% - env(safe-area-inset-top,0px) - 60px));opacity:0;z-index:99;padding:11px 18px;border-radius:999px;font-weight:600;font-size:15px;transition:transform .4s cubic-bezier(.2,.9,.25,1),opacity .3s;max-width:calc(100% - 32px);text-align:center}
+.toast.show{transform:translate(-50%,0);opacity:1}
 .toast{display:flex;align-items:center;gap:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .toast-undo{flex:none;color:var(--accent);font-weight:700;font-size:15px;padding:2px 2px 2px 10px;border-left:1px solid var(--sep)}
 
@@ -512,7 +518,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.3', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.4', tg:'gog_sonn'};
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
@@ -876,17 +882,36 @@ function payState(x){
 }
 
 /* ---------- статистика ---------- */
+// Деньги считаются по дню, когда они пришли: задаток — когда его внесли (prepaidAt), остаток — когда отметили «оплачено» (paidAt).
+// У старых записей без этих дат: задаток — день создания записи, остаток — день съёмки (если он уже прошёл).
+const isoDay = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+function payments(x){
+  const sum = +(x.amount ?? x.price) || 0; if (!sum || !x.date) return [];
+  const pre = Math.min(+x.prepaid || 0, sum), made = x.created ? isoDay(x.created) : x.date, t = today();
+  const preDay = x.prepaidAt || (made < x.date ? made : x.date);
+  if (x.paid && pre >= sum) return [{d: preDay, a: sum}];
+  const out = pre ? [{d: preDay, a: pre}] : [];
+  if (x.paid) out.push({d: x.paidAt || (x.date <= t ? x.date : made), a: sum - pre});
+  return out;
+}
+// отметки дат оплаты при сохранении: old — как было, rec — как стало
+function stampPay(rec, old = {}){
+  const t = today();
+  if (+rec.prepaid > 0) rec.prepaidAt = +old.prepaid === +rec.prepaid && old.prepaidAt ? old.prepaidAt : t; else delete rec.prepaidAt;
+  if (rec.paid) rec.paidAt = old.paid && old.paidAt ? old.paidAt : t; else delete rec.paidAt;
+  return rec;
+}
 function stats(ym){
   const inc = {shoot:0, retouch:0, lesson:0, other:0, task:0}; let unpaid = 0, got = 0, count = 0;
   for (const e of data.entries){
+    for (const p of payments(e)) if (p.d.slice(0,7) === ym){ inc[e.type] = (inc[e.type]||0) + p.a; got += p.a; }
     if (!e.date || e.date.slice(0,7) !== ym) continue;
-    const a = +e.amount || 0; inc[e.type] = (inc[e.type]||0) + a; count++;
-    const p = payState(e); if (p){ unpaid += p.due; got += a - p.due; }
+    count++; const p = payState(e); if (p) unpaid += p.due;
   }
   for (const s of data.subs){
+    for (const p of payments(s)) if (p.d.slice(0,7) === ym){ inc.lesson += p.a; got += p.a; }
     if (!s.date || s.date.slice(0,7) !== ym) continue;
-    const a = +s.price || 0; inc.lesson += a;
-    const p = payState(s); if (p){ unpaid += p.due; got += a - p.due; }
+    const p = payState(s); if (p) unpaid += p.due;
   }
   const exp = {}; let expT = 0;
   for (const x of data.expenses){
@@ -896,12 +921,8 @@ function stats(ym){
   const incT = Object.values(inc).reduce((a,b)=>a+b,0);
   return {inc, incT, unpaid, got, exp, expT, net: incT - expT, count};
 }
-function earnedIn(ym){
-  const t = today(); let sum = 0;
-  for (const e of data.entries) if (e.date && e.date.slice(0,7) === ym && e.date <= t) sum += +e.amount || 0;
-  for (const s of data.subs) if (s.date && s.date.slice(0,7) === ym && s.date <= t) sum += +s.price || 0;
-  return sum;
-}
+// заработано за месяц = деньги, которые реально пришли в этом месяце
+function earnedIn(ym){ return stats(ym).incT; }
 function allMonths(){
   const set = new Set();
   data.entries.forEach(e => e.date && set.add(e.date.slice(0,7)));
@@ -932,6 +953,7 @@ function checkAch(ctx = {}){
   persist();
   celebrateQueue.push(...q);
   if (q.length && !celebrating) nextCelebrate();
+  return q.length;
 }
 const celebrateQueue = []; let celebrating = false;
 function nextCelebrate(){
@@ -1067,6 +1089,23 @@ function expandEntries(from, to){
 }
 const occAttr = e => e && e.occ ? ` data-occ="${e.occ}"` : '';
 const repeatLabel = e => isRepeat(e) ? (REPEATS.find(r => r[0] === e.repeat.f) || ['',''])[1].toLowerCase() : '';
+// время: два барабана (часы и минуты через 10) вместо поминутного; значение — в скрытом поле, как раньше
+function timePicker(id, name, v){
+  const [h, m] = /^\d{2}:\d{2}$/.test(v || '') ? v.split(':') : ['', ''];
+  const mins = ['00','10','20','30','40','50']; if (m && !mins.includes(m)){ mins.push(m); mins.sort(); }
+  return `<span class="tpick"><select data-tp="h" aria-label="Часы"><option value="">—</option>${Array.from({length:24}, (_, i) => pad(i)).map(x => `<option ${x === h ? 'selected' : ''}>${x}</option>`).join('')}</select><b>:</b><select data-tp="m" aria-label="Минуты">${mins.map(x => `<option ${x === (m || '00') ? 'selected' : ''}>${x}</option>`).join('')}</select><input type="hidden" id="${id}" ${name ? `name="${name}"` : ''} value="${esc(v || '')}"></span>`;
+}
+function setTime(id, v){
+  const inp = $('#' + id), box = inp.closest('.tpick'), [h, m] = v.split(':'), ms = box.querySelector('[data-tp="m"]');
+  if (![...ms.options].some(o => o.value === m)) ms.add(new Option(m, m));
+  box.querySelector('[data-tp="h"]').value = h; ms.value = m; inp.value = v;
+}
+document.addEventListener('change', ev => {
+  const box = ev.target.closest && ev.target.closest('.tpick'); if (!box) return;
+  const h = box.querySelector('[data-tp="h"]').value, m = box.querySelector('[data-tp="m"]').value, inp = box.querySelector('input');
+  inp.value = h ? h + ':' + m : '';
+  inp.dispatchEvent(new Event('input', {bubbles:true}));
+});
 function byDate(){
   const m = {};
   // окно вокруг выбранного дня — в нём разворачиваем повторы
@@ -1125,6 +1164,9 @@ function renderHome(){
   const t = today(), d = parseD(t);
   const wd = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'][d.getDay()];
   let h = `<div class="stack">` + installBanner() + recapBanner();
+  // без входа всё живёт только в этом браузере — сменишь телефон или почистишь Safari, и записей не будет
+  if (!session && (data.entries.length || data.clients.length)) h += `<button class="card glass phrase" data-act="settings"><span class="spark" style="background:var(--grad-warm)">☁️</span>
+    <p>Записи хранятся только на этом телефоне<small>Создай аккаунт или войди — так они не потеряются</small></p></button>`;
   h += `<div class="home-date">${wd}, ${d.getDate()} ${MONTHS_G[d.getMonth()]}</div>`;
 
   // не закрыто — с кнопкой «Перенести»
@@ -1170,7 +1212,7 @@ function reschedSheet(e){
     <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:14px">${opts.map(([l, d, tt]) => `<button class="row" data-act="resched-to" data-id="${e.id}"${occAttr(e)} data-d="${d}" data-t="${tt}" style="min-height:52px">
       <div class="rt"><div class="t1">${l}</div><div class="t2">${dayLabel(d)}${tt ? ' · ' + tt : ''}</div></div><span class="chev">${ICONS.right}</span></button>`).join('')}</div>
     <form id="reschedForm" class="form"><div class="field"><label for="rs-d">Дата</label><input type="date" id="rs-d" value="${shiftDay(t, 1)}"></div>
-      <div class="field"><label for="rs-t">Время</label><input type="time" id="rs-t" value="${esc(tm)}"></div></form>
+      <div class="field"><label for="rs-t">Время</label>${timePicker('rs-t', '', tm)}</div></form>
     <div class="actions"><button class="btn primary" data-act="resched-custom" data-id="${e.id}"${occAttr(e)}>Перенести на эту дату</button>
       <button class="btn tinted" data-act="done" data-id="${e.id}"${occAttr(e)}>${ICONS.tick}Нет, уже сделано</button></div>`);
 }
@@ -1297,7 +1339,7 @@ function calMonth(map){
   for (let i = 0; i < weeks*7; i++){
     const d = shiftDay(start, i), list = map[d] || [];
     const dots = list.slice(0,3).map(e => `<i style="background:${(TYPES[e.type]||TYPES.other).color}"></i>`).join('') + (list.length > 3 ? '<i class="more"></i>' : '');
-    h += `<button class="mday ${d.slice(0,7)!==first.slice(0,7)?'out':''} ${d===t?'today':''} ${d===ui.selDate?'sel':''}" data-act="pick-day" data-d="${d}"><b>${+d.slice(8)}</b><span class="md">${dots}</span></button>`;
+    h += `<button class="mday ${d.slice(0,7)!==first.slice(0,7)?'out':''} ${d===t?'today':''} ${d===ui.selDate?'sel':''}" data-act="pick-day" data-d="${d}" aria-label="${dayLabel(d)}${map[d] ? ', записей: ' + map[d].length : ''}"><b>${+d.slice(8)}</b><span class="md">${dots}</span></button>`;
   }
   h += `</div>`;
   const list = map[ui.selDate] || [];
@@ -1460,6 +1502,7 @@ function subForm(s, clientId){
     if (!cid){ toast('Укажи, для кого абонемент'); return; }
     const rec = touch({...s, id: s.id || uid(), clientId: cid, title: fd.get('title').trim(), total: +$('#s-total').textContent,
       date: fd.get('date') || today(), price: parseAmount(fd.get('price')), prepaid: parseAmount(fd.get('prepaid')), paid: !!fd.get('paid'), created: s.created || Date.now()});
+    stampPay(rec, isNew ? {} : s);
     if (isNew) data.subs.push(rec); else data.subs[data.subs.findIndex(x => x.id === s.id)] = rec;
     persist(); closeSheet(); render(); checkAch({month: rec.date.slice(0,7)});
     toast(isNew ? 'Абонемент создан' : 'Сохранено');
@@ -1481,7 +1524,7 @@ function renderMoney(){
   h += `<div class="card glass"><div class="hero">
       <div class="k"><div class="label">Чистыми за ${monthTitle(ui.month)}</div>
         <div class="money ${s.net<0?'neg':''}">${rub(s.net)}</div>
-        <div class="mini"><div>Доход<b>${rub(s.incT)}</b></div><div>Расходы<b>${rub(s.expT)}</b></div></div>
+        <div class="mini"><div>Получено<b>${rub(s.incT)}</b></div><div>Расходы<b>${rub(s.expT)}</b></div>${s.unpaid ? `<div>Ожидается<b>${rub(s.unpaid)}</b></div>` : ''}</div>
       </div>
       <button class="ring" data-act="goal" aria-label="Цель на месяц">${ringSvg(pct)}
         <span class="pct">${data.goal ? Math.round(pct*100)+'%' : '🎯'}<small>${data.goal ? 'от цели' : 'цель'}</small></span></button>
@@ -1490,7 +1533,7 @@ function renderMoney(){
   if (s.unpaid){
     const list = data.entries.filter(e => e.date && e.date.slice(0,7) === ui.month && (payState(e)||{}).due > 0);
     const subs = data.subs.filter(x => x.date && x.date.slice(0,7) === ui.month && (payState(x)||{}).due > 0);
-    h += `<div class="section-title">Ещё придёт · ${rub(s.unpaid)}</div><div class="section-note">Уже получено ${rub(s.got)}. Нажми на статус, когда клиент доплатит.</div>
+    h += `<div class="section-title">Ожидается · ${rub(s.unpaid)}</div><div class="section-note">Записи этого месяца, по которым ещё не всё оплачено. Нажми на статус, когда клиент доплатит — деньги попадут в месяц оплаты.</div>
       <div class="list glass">${list.map(e => entryRow(e,{showDate:true})).join('')}${subs.map(x => { const p = payState(x); return `<div class="row" data-act="edit-sub" data-id="${x.id}" role="button" tabindex="0">
         <span class="ic" style="--c:var(--indigo)">${ICONS.sub}</span><div class="rt"><div class="t1">${esc(subTitle(x))}</div><div class="t2">${esc(clientName(x))} · ${x.total} ${plural(x.total,'занятие','занятия','занятий')}</div></div>
         <div class="rr"><div class="amt">${rub(x.price)}</div><button class="pill ${p.cls}" data-act="paid-sub" data-id="${x.id}">${p.text}</button></div></div>`; }).join('')}</div>`;
@@ -1672,7 +1715,7 @@ function entryForm(e, preset = {}){
       </div>
       <div class="form">
         <div class="field"><label for="f-date" id="l-date">${e.type==='retouch'?'Сдать до':'Дата'}</label><input type="date" id="f-date" name="date" value="${esc(e.date)}" required></div>
-        <div class="field" id="timeField"><label for="f-time" id="l-time">${e.type==='retouch'?'Сдать к':'Время'}</label><input type="time" id="f-time" name="time" value="${esc(e.time||'')}"></div>
+        <div class="field" id="timeField"><label for="f-time" id="l-time">${e.type==='retouch'?'Сдать к':'Время'}</label>${timePicker('f-time', 'time', e.time || '')}</div>
         <div class="field" id="durField" ${e.type==='retouch'?'hidden':''}><label for="f-dur">Длительность</label><select id="f-dur" name="dur">${DURS.map(([v,l]) => `<option value="${v}" ${durOf(e)===v?'selected':''}>${l}</option>`).join('')}</select></div>
       </div>
       <div class="form" id="repeatBox" ${e.type === 'task' ? '' : 'hidden'}>
@@ -1697,6 +1740,7 @@ function entryForm(e, preset = {}){
         <div class="field"><label for="f-done" style="width:auto" id="l-done">${e.type==='task'?'Сделано':prof().post.done}</label><input type="checkbox" class="sw" id="f-done" name="done" ${e.done?'checked':''}></div>
       </div>
       <div class="form"><div class="field col"><label for="f-note">Заметка</label><textarea id="f-note" name="note" rows="2" placeholder="${e.type==='task'?'С кем, что взять с собой…':'Локация, образы, пожелания…'}">${esc(e.note||'')}</textarea></div></div>
+      <p class="warn" id="clashWarn" hidden></p>
       <div class="actions">
         <button type="submit" class="btn primary">${isNew ? 'Добавить' : 'Сохранить'}</button>
         ${isNew ? '' : occ ? `<button type="button" class="btn danger" data-act="del-occ" data-id="${e.id}" data-occ="${occ}">Удалить только ${dayLabel(occ).toLowerCase()}</button>
@@ -1738,7 +1782,7 @@ function entryForm(e, preset = {}){
   $('#sunInfo').addEventListener('refresh', syncSun);
   $('#sunInfo').addEventListener('click', ev => {
     const b = ev.target.closest('[data-act="apply-time"]'); if (!b) return;
-    ev.stopPropagation(); $('#f-time').value = b.dataset.t; syncSun(); toast('Время перенесено на ' + b.dataset.t);
+    ev.stopPropagation(); setTime('f-time', b.dataset.t); syncSun(); toast('Время перенесено на ' + b.dataset.t);
   });
   ['f-date','f-time','f-dur'].forEach(id => $('#' + id).addEventListener('input', syncSun));
   syncPkgs(); syncSun(); loadWeather();
@@ -1784,7 +1828,7 @@ function entryForm(e, preset = {}){
     const subId = type === 'lesson' ? fd.get('sub') || '' : '';
     // у «дела» нет денег и клиента
     const amount = subId || type === 'task' ? 0 : parseAmount(fd.get('amount'));
-    const prepaid = subId ? 0 : Math.min(parseAmount(fd.get('prepaid')), amount);
+    const prepaidRaw = subId ? 0 : parseAmount(fd.get('prepaid')), prepaid = Math.min(prepaidRaw, amount);
     const cid = type === 'task' ? '' : ensureClient(fd.get('client'));
     const rec = {
       id: e.id || uid(), type,
@@ -1801,14 +1845,27 @@ function entryForm(e, preset = {}){
       skip: type === 'task' && fd.get('repeat') ? e.skip : undefined,
       note: fd.get('note').trim(), created: e.created || Date.now(), u: Date.now()
     };
+    stampPay(rec, isNew ? {} : e);
+    // накладка по времени: предупреждаем один раз, второе нажатие «Сохранить» — сохраняем как есть
+    const clash = rec.time && rec.type !== 'retouch' && expandEntries(rec.date, rec.date).find(x => x.id !== rec.id && x.time && x.type !== 'retouch' &&
+      toMin(x.time) < toMin(rec.time) + (rec.dur || 60) && toMin(rec.time) < toMin(x.time) + durOf(x));
+    const clashKey = clash ? clash.id + rec.date + rec.time + rec.dur : '';
+    if (clash && form.dataset.clash !== clashKey){
+      form.dataset.clash = clashKey;
+      const w = $('#clashWarn'); w.hidden = false;
+      w.textContent = `⚠️ На это время уже есть «${clash.title || TYPES[clash.type].one}» (${clash.time}). Нажми «${isNew ? 'Добавить' : 'Сохранить'}» ещё раз, если всё верно.`;
+      w.scrollIntoView({block:'center', behavior:'smooth'});
+      return;
+    }
     if (isNew) data.entries.push(rec); else data.entries[data.entries.findIndex(x => x.id === e.id)] = rec;
     persist();
     const back = occ && isRepeat(rec) ? occ : rec.date; // правили повтор — остаёмся на его дне
     ui.month = back.slice(0,7); ui.selDate = back;
     closeSheet(); render();
     const sub = subId && subById(subId);
-    toast(isNew ? cheer(rec, sub) : 'Сохранено');
-    checkAch({month: ui.month, subDone: sub && subLeft(sub) === 0 ? sub : null});
+    // если выскочит поздравление — тост не нужен, иначе их двое сразу
+    const cel = checkAch({month: ui.month, subDone: sub && subLeft(sub) === 0 ? sub : null});
+    if (!cel) toast(prepaidRaw > amount && amount ? `Задаток больше суммы — ${g('записал[а|]')} как полную оплату` : isNew ? cheer(rec, sub) : 'Сохранено');
   });
 }
 
@@ -1846,29 +1903,57 @@ function expenseForm(x){
   });
 }
 
-// «+»: три раздела — заработок, личное (без денег), учёт; внутри — варианты
+// «+»: три раздела — заработок, личное (без денег), учёт; внутри — варианты.
+// Список настраивается: лишнее можно скрыть, своё — добавить (settings.addHide = ['раздел:ключ'], settings.addOwn = {раздел:[{e,t}]}).
+const LIFE_PRESETS = [['☕️','Встреча с друзьями'],['🏋️','Спорт'],['🩺','Врач'],['🛒','Покупки'],['🏠','Дела по дому'],['🎂','День рождения']];
+function addItems(sec){
+  const it = (key, act, attrs, color, icon, t1, t2) => ({key, act, attrs, color, icon, t1, t2});
+  const student = prof().student === 'Ученица' ? 'ученицей' : 'учеником';
+  const own = ((data.settings.addOwn || {})[sec] || []).map((o, i) => it('own' + i, 'new-entry',
+    `data-type="${sec === 'life' ? 'task' : 'shoot'}" data-title="${esc(o.t)}" data-emoji="${esc(o.e)}"`, sec === 'life' ? 'var(--green)' : TYPES.shoot.color,
+    `<span class="emo">${esc(o.e || '⭐️')}</span>`, esc(o.t), sec === 'life' ? 'Своё дело' : 'Своя запись — с суммой'));
+  if (sec === 'work') return [
+    it('shoot', 'new-entry', 'data-type="shoot"', TYPES.shoot.color, ICONS.shoot, TYPES.shoot.one, 'Дата, время, сумма и предоплата'),
+    ...(postOn() ? [it('retouch', 'new-entry', 'data-type="retouch"', TYPES.retouch.color, ICONS.retouch, TYPES.retouch.one, prof().post.sub)] : []),
+    it('lesson', 'new-entry', 'data-type="lesson"', TYPES.lesson.color, ICONS.lesson, 'Встреча или созвон с ' + student, 'Можно списать с абонемента'),
+    it('other', 'new-entry', 'data-type="other"', TYPES.other.color, ICONS.other, 'Другой доход', prof().types.other.ph), ...own];
+  if (sec === 'life') return [
+    it('task', 'new-entry', 'data-type="task"', TYPES.task.color, ICONS.task, 'Дело', 'Своё название, время занято — без денег'),
+    ...LIFE_PRESETS.map(([em, t]) => it('p:' + t, 'new-entry', `data-type="task" data-title="${t}" data-emoji="${em}"`, 'var(--green)', `<span class="emo">${em}</span>`, t, 'Дело без денег')), ...own];
+  return [
+    it('client', 'new-client', '', 'var(--green)', ICONS.client, 'Клиент', 'Имя, телефон, Instagram'),
+    it('sub', 'new-sub', '', 'var(--indigo)', ICONS.sub, 'Абонемент', 'Пакет занятий для ' + (prof().student === 'Ученица' ? 'ученицы' : 'ученика')),
+    it('exp', 'add-exp', '', 'var(--gray)', ICONS.expense, 'Расход', 'Аренда техники, студия, софт…')];
+}
 function addChooser(sec){
   sec = sec || addChooser.last || 'work'; addChooser.last = sec;
-  const item = (act, attrs, color, icon, t1, t2) => `<button class="row" data-act="${act}" ${attrs}><span class="ic" style="--c:${color}">${icon}</span><div class="rt"><div class="t1">${t1}</div><div class="t2">${t2}</div></div></button>`;
+  const edit = !!addChooser.edit, hide = data.settings.addHide || [];
   const secs = [['work','💰','Заработок'],['life','🗓️','Личное'],['books','📒','Учёт']];
-  const student = prof().student === 'Ученица' ? 'ученицей' : 'учеником';
-  let list = '';
-  if (sec === 'work') list = item('new-entry','data-type="shoot"',TYPES.shoot.color,ICONS.shoot,TYPES.shoot.one,'Дата, время, сумма и предоплата')
-    + (postOn() ? item('new-entry','data-type="retouch"',TYPES.retouch.color,ICONS.retouch,TYPES.retouch.one,prof().post.sub) : '')
-    + item('new-entry','data-type="lesson"',TYPES.lesson.color,ICONS.lesson,'Встреча или созвон с ' + student,'Можно списать с абонемента')
-    + item('new-entry','data-type="other"',TYPES.other.color,ICONS.other,'Другой доход',prof().types.other.ph);
-  else if (sec === 'life'){
-    const presets = [['☕️','Встреча с друзьями'],['🏋️','Спорт'],['🩺','Врач'],['🛒','Покупки'],['🏠','Дела по дому'],['🎂','День рождения']];
-    list = item('new-entry','data-type="task"',TYPES.task.color,ICONS.task,'Дело','Своё название, время занято — без денег')
-      + presets.map(([em, t]) => `<button class="row" data-act="new-entry" data-type="task" data-title="${t}" data-emoji="${em}"><span class="ic" style="--c:var(--green)"><span class="emo">${em}</span></span><div class="rt"><div class="t1">${t}</div><div class="t2">Дело без денег</div></div></button>`).join('');
-  } else list = item('new-client','','var(--green)',ICONS.client,'Клиент','Имя, телефон, Instagram')
-    + item('new-sub','','var(--indigo)',ICONS.sub,'Абонемент','Пакет занятий для ' + (prof().student === 'Ученица' ? 'ученицы' : 'ученика'))
-    + item('add-exp','','var(--gray)',ICONS.expense,'Расход','Аренда техники, студия, софт…');
+  const ic = x => `<span class="ic" style="--c:${x.color}">${x.icon}</span><div class="rt"><div class="t1">${x.t1}</div><div class="t2">${x.t2}</div></div>`;
+  const items = addItems(sec);
+  let list;
+  if (!edit){
+    const vis = items.filter(x => !hide.includes(sec + ':' + x.key));
+    list = vis.map(x => `<button class="row" data-act="${x.act}" ${x.attrs}>${ic(x)}</button>`).join('')
+      || `<div class="row"><div class="rt"><div class="t2" style="white-space:normal">Всё скрыто. Нажми «Настроить список», чтобы вернуть.</div></div></div>`;
+  } else {
+    list = items.map(x => {
+      const own = x.key.startsWith('own'), off = hide.includes(sec + ':' + x.key);
+      return `<div class="row add-edit-row ${off ? 'off' : ''}">${ic(x)}${own
+        ? `<button class="pill" data-act="add-own-del" data-k="${x.key.slice(3)}" style="color:var(--red)">Удалить</button>`
+        : `<button class="pill" data-act="add-toggle" data-k="${x.key}">${off ? 'Показать' : 'Скрыть'}</button>`}</div>`;
+    }).join('');
+    if (sec !== 'books') list += `<div class="row" style="gap:8px"><input id="ao-e" maxlength="4" placeholder="🙂" aria-label="Значок" style="width:44px;text-align:center;font-size:22px;border:0;background:var(--fill);border-radius:12px;padding:8px 0">
+      <input id="ao-t" maxlength="40" placeholder="${sec === 'life' ? 'Например, «Йога»' : 'Например, «Свадьба»'}" style="flex:1;min-width:0;border:0;background:none;font-size:17px;outline:none">
+      <button class="pill" data-act="add-own-new" style="color:var(--accent)">Добавить</button></div>`;
+  }
   openSheet(`${head('Добавить')}
     <div class="add-secs">${secs.map(([k, em, l]) => `<button class="add-sec ${k === sec ? 'on' : ''}" data-act="add-sec" data-s="${k}"><span>${em}</span>${l}</button>`).join('')}</div>
-    <p class="hint" style="margin:0 6px 10px">${sec === 'work' ? 'Записи, которые приносят деньги.' : sec === 'life' ? 'Личное время — в календаре, но без денег.' : 'Клиенты, абонементы и расходы.'}</p>
-    <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:6px">${list}</div>`);
+    <p class="hint" style="margin:0 6px 10px">${edit ? 'Скрой то, что не нужно, и добавь своё. Скрытое можно вернуть.' : sec === 'work' ? 'Записи, которые приносят деньги.' : sec === 'life' ? 'Личное время — в календаре, но без денег.' : 'Клиенты, абонементы и расходы.'}</p>
+    <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:6px">${list}</div>
+    <button class="btn tinted" data-act="add-edit">${edit ? 'Готово' : 'Настроить список'}</button>`);
 }
+function addSettings(fn){ data.settings = {...data.settings}; fn(data.settings); data.settingsU = Date.now(); persist(); addChooser(); }
 
 function goalForm(){
   openSheet(`${head('Цель на месяц')}
@@ -1964,7 +2049,7 @@ async function syncNow(){
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   if (tz && data.settings.tz !== tz){ data.settings = {...data.settings, tz}; data.settingsU = Date.now(); }
   try {
-    const rows = await rest('GET', 'user_data?select=data');
+    const rows = await rest('GET', 'user_data?select=data&user_id=eq.' + encodeURIComponent(session.uid)); // RLS и так отдаёт только свои — это страховка
     const remote = rows && rows[0] ? rows[0].data : null;
     const before = JSON.stringify(data);
     if (remote && Array.isArray(remote.entries)) data = normalize(merge(data, normalize(remote)));
@@ -2450,7 +2535,7 @@ function profileSheet(){
       <div class="form"><div class="field"><label for="pf-name">Имя</label><input id="pf-name" value="${esc(p.name||'')}" placeholder="Как к тебе обращаться"></div></div>
       <div class="seg"><label><input type="radio" name="pf-g" value="f" ${p.gender!=='m'?'checked':''}><span>Обращаться «она»</span></label><label><input type="radio" name="pf-g" value="m" ${p.gender==='m'?'checked':''}><span>Обращаться «он»</span></label></div>
       <div class="cats" id="pfProf">${Object.entries(PROFS).map(([k, pr]) => `<label><input type="radio" name="pf-p" value="${k}" ${(p.profession || 'photo') === k ? 'checked' : ''}><span>${pr.name}</span></label>`).join('')}</div>
-      <div class="form" id="pfProfNameBox" ${p.profession === 'custom' ? '' : 'hidden'}><div class="field"><label for="pf-profname">Профессия</label><input id="pf-profname" value="${esc(p.profName||'')}" placeholder="Например, строитель"></div></div>
+      <div class="form" id="pfProfNameBox" ${p.profession === 'custom' ? '' : 'hidden'}><div class="field"><label for="pf-profname">Профессия</label><input id="pf-profname" value="${esc(p.profName||'')}" placeholder="Например, тату-мастер"></div></div>
       <p class="hint">Город нужен для золотого часа и погоды.</p>
       <div id="pfCity"></div>
       <button class="btn primary" type="submit" style="margin-top:14px">Сохранить</button>
@@ -2503,7 +2588,7 @@ function onboarding(){
           ${profRow('beauty', 'var(--orange)')}
           ${profRow('custom', 'var(--green)')}
         </div>
-        ${st.profession === 'custom' ? `<div class="form" style="margin-top:4px"><div class="field"><input id="ob-prof" value="${esc(st.profName)}" placeholder="Кто ты по профессии? Например, строитель" style="text-align:left"></div></div>` : ''}`;
+        ${st.profession === 'custom' ? `<div class="form" style="margin-top:4px"><div class="field"><input id="ob-prof" value="${esc(st.profName)}" placeholder="Например, тату-мастер" style="text-align:left"></div></div>` : ''}`;
     } else if (st.step === 3){
       body = `<h2>Что внутри</h2><div class="stack" style="gap:10px;text-align:left">${TOUR().map(([k,c,t,d]) => `<div class="row" style="background:var(--glass);border:1px solid var(--edge);border-radius:18px;align-items:flex-start;padding:14px 16px">
         <span class="ic" style="--c:${c}">${ICON_TOUR[k]}</span><div class="rt"><div class="t1">${t}</div><div class="t2" style="white-space:normal">${d}</div></div></div>`).join('')}</div>`;
@@ -2545,6 +2630,7 @@ function onboarding(){
     if (b.dataset.ob === 'prof'){ st.profession = b.dataset.p; draw(); return; }
     if (b.dataset.ob === 'skip'){ st.city = null; st.step++; draw(); return; }
     if (st.step === 1 && !st.name.trim()){ toast('Напиши, как тебя зовут'); return; }
+    if (st.step === 2 && st.profession === 'custom' && !st.profName.trim()){ toast('Напиши, чем ты занимаешься'); el.querySelector('#ob-prof')?.focus(); return; }
     if (b.dataset.ob === 'later'){ st.step++; draw(); return; }
     if (st.step === 5 && !st.registered){
       const em = (el.querySelector('#ob-email').value || '').trim().toLowerCase(), pw = el.querySelector('#ob-pass').value || '';
@@ -2569,8 +2655,8 @@ const CAL_SOURCES = {
   apple: {name:'Apple Календарь', sub:'iCloud на iPhone', color:'var(--red)', steps:[
     'Открой приложение «Календарь» и нажми внизу справа значок календаря (сетка из точек) — откроется список «Календари».',
     'В разделе «iCloud» нажми ⓘ справа от календаря, где твои рабочие записи. Цвет кружка совпадает с цветом записей в календаре.',
-    'Включи «Публичный календарь». Под ним появится «Поделиться ссылкой…» — нажми и выбери «Скопировать».',
-    'Вернись сюда и вставь ссылку. Записи в нескольких календарях? Нажми «+ Ещё календарь» и добавь ссылку каждого. После переноса «Публичный календарь» можно выключить.'],
+    'Включи «Публичный календарь». Под ним появится «Поделиться ссылкой…» — нажми и выбери «Скопировать». Пока он включён, записи может увидеть любой, у кого есть ссылка, — никому её не отправляй.',
+    'Вернись сюда и вставь ссылку. Записи в нескольких календарях? Нажми «+ Ещё календарь» и добавь ссылку каждого. После переноса обязательно выключи «Публичный календарь» — ссылка перестанет работать.'],
     note:'Нет раздела «iCloud» или переключателя «Публичный календарь»? Значит, календарь хранится не в iCloud. Если он в разделе «Gmail» — вернись назад и выбери «Google Календарь». Если в разделе «На iPhone» — сначала включи синхронизацию: Настройки → твоё имя → iCloud → Календари (при вопросе выбери «Объединить»), затем повтори шаги.'},
   google: {name:'Google Календарь', sub:'calendar.google.com', color:'var(--indigo)', steps:[
     'Открой calendar.google.com в Safari. Если открылось приложение — нажми «аА» → «Полная версия сайта».',
@@ -2835,9 +2921,18 @@ document.addEventListener('click', ev => {
       break;
     }
     case 'phrase': ui.phrase = (ui.phrase + 1 + Math.floor(Math.random()*(PHRASES.length-1))) % PHRASES.length; render(); break;
-    case 'add': addChooser(); break;
+    case 'add': addChooser.edit = false; addChooser(); break;
     case 'new-entry': swapSheet(() => entryForm(null, {type: el.dataset.type, title: el.dataset.title, emoji: el.dataset.emoji})); break;
     case 'add-sec': addChooser(el.dataset.s); break;
+    case 'add-edit': addChooser.edit = !addChooser.edit; addChooser(); break;
+    case 'add-toggle': addSettings(st => { const k = addChooser.last + ':' + el.dataset.k, h = st.addHide || []; st.addHide = h.includes(k) ? h.filter(x => x !== k) : [...h, k]; }); break;
+    case 'add-own-del': addSettings(st => { const o = {...(st.addOwn || {})}; o[addChooser.last] = (o[addChooser.last] || []).filter((_, i) => i !== +el.dataset.k); st.addOwn = o; }); break;
+    case 'add-own-new': {
+      const t = ($('#ao-t').value || '').trim(), e = ($('#ao-e').value || '').trim();
+      if (!t){ toast('Напиши название'); $('#ao-t').focus(); break; }
+      addSettings(st => { const o = {...(st.addOwn || {})}; o[addChooser.last] = [...(o[addChooser.last] || []), {e, t}]; st.addOwn = o; });
+      toast('Добавлено в список'); break;
+    }
     case 'new-for-client': swapSheet(() => entryForm(null, {clientId: id, type: clientStats(id).isStudent && !clientStats(id).shoots ? 'lesson' : 'shoot'})); break;
     case 'new-client': swapSheet(() => clientForm(null)); break;
     case 'new-sub': swapSheet(() => subForm(null, id || '')); break;
@@ -2850,7 +2945,7 @@ document.addEventListener('click', ev => {
     // случайное нажатие на «Ждёт оплаты» легко отменить
     case 'paid': case 'paid-sub': {
       const x = a === 'paid' ? data.entries.find(y => y.id === id) : subById(id); if (!x) break;
-      const flip = () => { x.paid = !x.paid; touch(x); persist(); render(); };
+      const flip = () => { const old = {...x}; x.paid = !x.paid; stampPay(x, old); touch(x); persist(); render(); };
       flip();
       const what = x.title || (a === 'paid-sub' ? 'Абонемент' : TYPES[x.type] ? TYPES[x.type].one : 'Запись');
       toast(x.paid ? `«${what}» — оплачено 💸` : `«${what}» — снова ждёт оплаты`, flip);
