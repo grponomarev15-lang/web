@@ -10,6 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="Фикус">
 <meta name="theme-color" content="#f4f1f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b0a10" media="(prefers-color-scheme: dark)">
+<!-- тема «он» включается до первой отрисовки, иначе полсекунды мигает розовая -->
+<script>try{var d=JSON.parse(localStorage.getItem('kadr.v1'));if(d&&d.profile&&d.profile.gender==='m'){document.documentElement.setAttribute('data-g','m');document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content','#07090a')})}}catch(e){}</script>
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -101,6 +103,14 @@ a{color:inherit;text-decoration:none}
 .top h1{font:700 34px/1.1 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance}
 .hello{font-size:15px;color:var(--fg2);font-weight:500;margin-bottom:2px}
 .circle{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex:none}
+.me-btn{flex:none;border-radius:50%;box-shadow:0 6px 16px -6px var(--shadow);transition:transform .2s}
+.me-btn .ava{width:42px;height:42px;font-size:15px;border:2px solid var(--edge)}
+.me-btn:active{transform:scale(.92)}
+/* появление экрана при смене вкладки */
+.view-in > *{animation:viewIn .38s cubic-bezier(.2,.9,.25,1) both}
+.view-in > *:nth-child(2){animation-delay:.03s}
+.view-in > *:nth-child(3){animation-delay:.06s}
+@keyframes viewIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .circle svg{width:22px;height:22px}
 .month{display:flex;align-items:center;justify-content:space-between;margin:16px 0 14px;border-radius:999px;padding:4px}
 .month button{width:40px;height:40px;border-radius:50%;display:grid;place-items:center}
@@ -135,6 +145,31 @@ a{color:inherit;text-decoration:none}
 .row:active{background:var(--fill)}
 .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;color:#fff;background:var(--c)}
 .ic svg{width:21px;height:21px}
+.ic .emo{font-size:21px;line-height:1}
+.ic:has(.emo){background:color-mix(in srgb,var(--c) 22%,var(--glass-strong))}
+.prio-e{margin-right:5px}
+/* разделы меню «+» */
+.add-secs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.add-sec{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:18px;background:var(--glass);border:1px solid var(--edge);font-size:14px;font-weight:600;color:var(--fg2);transition:all .2s}
+.add-sec span{font-size:24px;line-height:1}
+.add-sec.on{background:color-mix(in srgb,var(--accent) 16%,var(--glass-strong));border-color:color-mix(in srgb,var(--accent) 45%,transparent);color:var(--fg)}
+.add-sec:active{transform:scale(.96)}
+.home-date{font-size:15px;font-weight:600;color:var(--fg2);margin:-6px 4px 0}
+.stat{text-align:left;width:100%}
+/* выбор приоритета и иконки в форме */
+.prio-seg span{font-size:15px;padding:6px 0}
+.field .prio-seg label{width:auto;flex:1;font-size:inherit;color:inherit}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;padding:10px 12px 12px}
+.emoji-grid button{font-size:22px;line-height:1;padding:7px 0;border-radius:10px}
+.emoji-grid button.on{background:color-mix(in srgb,var(--accent) 20%,transparent);box-shadow:inset 0 0 0 2px var(--accent)}
+.icon-pick{display:flex;align-items:center;gap:10px;width:100%;text-align:left}
+.icon-pick .cur{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:20px;background:var(--fill);margin-left:auto}
+.icon-pick .cur svg{width:20px;height:20px}
+.sheet-head .mini{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--fill);margin-left:auto}
+.sheet-head .mini + .circle{margin-left:8px}
+.row[style*="--pc"]{box-shadow:inset 3px 0 0 var(--pc)}
+/* блоки приоритетов под календарём */
+.prio-h{display:flex;align-items:center;gap:6px;margin:6px 6px -6px;font-size:14px;font-weight:700;color:var(--pc)}
 .ava{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;color:#fff;font:700 15px var(--rounded);background:linear-gradient(135deg,hsl(var(--h) 80% 62%),hsl(calc(var(--h) + 50) 70% 52%))}
 .rt{flex:1;min-width:0}
 .t1{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -337,9 +372,14 @@ a{color:inherit;text-decoration:none}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 6px;border-radius:999px;font-size:10.5px;font-weight:600;color:var(--fg2);transition:background .25s,color .25s;min-width:0}
 .tab svg{width:24px;height:24px}
 .tab[aria-selected="true"]{color:var(--accent);background:var(--fill)}
-.fab{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;pointer-events:auto;color:var(--accent);flex:none}
-.fab svg{width:28px;height:28px}
-.fab:active,.tab:active{transform:scale(.94)}
+/* «+» в центре таб-бара */
+.fab{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;flex:none;align-self:center;margin:0 4px;
+  background:var(--accent);color:var(--on-accent);box-shadow:0 8px 20px -6px var(--accent);transition:transform .25s cubic-bezier(.3,1.5,.5,1)}
+.fab svg{width:26px;height:26px}
+.tab,.fab{-webkit-user-select:none;user-select:none}
+.fab:active,.tab:active{transform:scale(.9)}
+.tab svg{transition:transform .35s cubic-bezier(.3,1.6,.5,1)}
+.tab[aria-selected="true"] svg{transform:translateY(-1px) scale(1.08)}
 
 /* шторка */
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:40;opacity:0;transition:opacity .3s}
@@ -417,6 +457,8 @@ a{color:inherit;text-decoration:none}
 
 .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translate(-50%,-140%);z-index:90;padding:11px 18px;border-radius:999px;font-weight:600;font-size:15px;transition:transform .4s cubic-bezier(.2,.9,.25,1);max-width:calc(100% - 32px);text-align:center}
 .toast.show{transform:translate(-50%,0)}
+.toast{display:flex;align-items:center;gap:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toast-undo{flex:none;color:var(--accent);font-weight:700;font-size:15px;padding:2px 2px 2px 10px;border-left:1px solid var(--sep)}
 
 .install{display:flex;gap:12px;align-items:flex-start}
 .install p{margin:0;font-size:15px}
@@ -442,12 +484,12 @@ a{color:inherit;text-decoration:none}
 <nav class="dock" aria-label="Разделы">
   <div class="dock-in">
     <div class="tabs glass" role="tablist">
+      <button class="tab" role="tab" data-act="tab" data-tab="home" id="tab-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V19a1.5 1.5 0 01-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 014 19z"/></svg>Главная</button>
       <button class="tab" role="tab" data-act="tab" data-tab="plan" id="tab-plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Календарь</button>
+      <button class="fab" data-act="add" aria-label="Добавить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
       <button class="tab" role="tab" data-act="tab" data-tab="clients" id="tab-clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.3"/><path d="M3 19.5c.7-3.4 3.1-5.3 6-5.3s5.3 1.9 6 5.3M15.5 5.5a3.2 3.2 0 010 6.2M18 14.5c1.5.8 2.6 2.4 3 5"/></svg>Клиенты</button>
       <button class="tab" role="tab" data-act="tab" data-tab="money" id="tab-money"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="3"/><circle cx="12" cy="12.5" r="2.6"/><path d="M6 9.5v.01M18 15.5v.01"/></svg>Деньги</button>
-      <button class="tab" role="tab" data-act="tab" data-tab="history" id="tab-history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></svg>История</button>
     </div>
-    <button class="fab glass" data-act="add" aria-label="Добавить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
   </div>
 </nav>
 
@@ -470,7 +512,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.1', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.2', tg:'gog_sonn'};
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
@@ -780,7 +822,7 @@ function persist(fromSync){
 }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
 
-const ui = { tab:'plan', month: today().slice(0,7), filter:'all', phrase: Math.floor(Math.random()*PHRASES.length), q:'', calView:'month', selDate: today() };
+const ui = { tab:'home', month: today().slice(0,7), filter:'all', phrase: Math.floor(Math.random()*PHRASES.length), q:'', calView:'month', selDate: today() };
 try { const t = localStorage.getItem('kadr.tab'); if (t) ui.tab = t; const v = localStorage.getItem('kadr.calView'); if (v) ui.calView = v; } catch(e) {}
 
 // свайп влево/вправо листает дни, недели и месяцы
@@ -921,13 +963,15 @@ function confetti(){
 /* ---------- отрисовка ---------- */
 function render(){
   applyProfession();
-  const titles = {plan:'Календарь', clients:'Клиенты', money:'Деньги', history:'История'};
+  const titles = {home:'Главная', plan:'Календарь', clients:'Клиенты', money:'Деньги', history:'История'};
+  if (!titles[ui.tab]) ui.tab = 'home';
   const hour = new Date().getHours();
   const hello = hour < 5 ? 'Доброй ночи' : hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер';
+  // кружок с инициалами вместо шестерёнки — открывает меню (профиль, история, шаблоны, настройки)
   let html = `
     <header class="top">
       <div><div class="hello">${hello}${myName() ? ', ' + esc(myName()) : ''}${data.profile && data.profile.gender === 'm' ? '' : ' ♥'}</div><h1>${titles[ui.tab]}</h1></div>
-      <button class="circle glass" data-act="settings" aria-label="Настройки">${ICONS.gear}</button>
+      <button class="me-btn" data-act="settings" aria-label="Меню">${ava(myName() || '•')}</button>
     </header>`;
   if (ui.tab === 'money' || ui.tab === 'history') html += `
     <div class="month glass">
@@ -936,22 +980,33 @@ function render(){
       <button data-act="month" data-k="1" aria-label="Следующий месяц">${ICONS.right}</button>
     </div>`;
   else html += `<div style="height:16px"></div>`;
-  html += ui.tab === 'plan' ? renderPlan() : ui.tab === 'clients' ? renderClients() : ui.tab === 'money' ? renderMoney() : renderHistory();
-  $('#app').innerHTML = html;
+  html += ui.tab === 'home' ? renderHome() : ui.tab === 'plan' ? renderPlan() : ui.tab === 'clients' ? renderClients() : ui.tab === 'money' ? renderMoney() : renderHistory();
+  const app = $('#app');
+  app.innerHTML = html;
+  // при смене вкладки — мягкое появление экрана, как в iOS (обычная перерисовка без анимации)
+  if (render.lastTab !== ui.tab){ app.classList.remove('view-in'); void app.offsetWidth; app.classList.add('view-in'); render.lastTab = ui.tab; }
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === ui.tab));
   if (ui.tab === 'history') drawChart();
   if (ui.tab === 'plan') bindSwipe($('#cal'));
   if (ui.tab === 'clients'){ const si = $('#q'); si.addEventListener('input', () => { ui.q = si.value; $('#clientList').innerHTML = clientListHtml(); }); }
 }
 
-function iconFor(e){ return e.type === 'lesson' && e.format === 'call' ? ICONS.call : ICONS[e.type] || ICONS.other; }
-
+// иконки, которые можно поставить записи вместо стандартной
+const EMOJIS = ['📷','🎬','✂️','💄','💅','💇‍♀️','🎓','📚','☕️','🍽️','🏋️','🧘','🩺','🛒','🚗','✈️','🏠','💼','📞','💻','🎉','🎂','❤️','🐶','🎨','🎵','📝','🧹','💰','📦','🌿'];
+// приоритет записи: 3 — срочно, 2 — важно, 1 — не горит; 0/нет — без приоритета
+const PRIO = {3:{emoji:'🔥', name:'Срочно', color:'var(--red)'}, 2:{emoji:'⚡', name:'Важно', color:'var(--orange)'}, 1:{emoji:'😴', name:'Не горит', color:'var(--green)'}};
+// что можно отметить «сделано»: сдача работы и личные дела
+const checkable = e => e.type === 'retouch' || e.type === 'task';
+function iconFor(e){
+  if (e.emoji) return `<span class="emo">${esc(e.emoji)}</span>`;
+  return e.type === 'lesson' && e.format === 'call' ? ICONS.call : ICONS[e.type] || ICONS.other;
+}
 function entryRow(e, opts = {}){
   const t = TYPES[e.type] || TYPES.other;
   const isPast = e.date < today();
   const bits = [];
-  if (opts.showDate) bits.push((e.type === 'retouch' ? 'сдать ' : '') + shortDate(e.date));
-  else if (e.type === 'retouch') bits.push('срок сдачи');
+  if (opts.showDate) bits.push((e.type === 'retouch' ? 'сдать ' : '') + shortDate(e.date) + (e.type === 'retouch' && e.time ? ' до ' + e.time : ''));
+  else if (e.type === 'retouch') bits.push(e.time ? 'сдать до ' + e.time : 'срок сдачи');
   if (e.time && e.type !== 'retouch') bits.push(e.time);
   if (e.type === 'lesson') bits.push(e.format === 'call' ? 'созвон' : 'встреча');
   const cn = opts.noClient ? '' : clientName(e);
@@ -962,11 +1017,12 @@ function entryRow(e, opts = {}){
   let pill = '';
   if (sub){ const n = subLessons(sub).findIndex(x => x.id === e.id) + 1; pill = `<span class="pill sub">Абонемент ${n}/${sub.total}</span>`; }
   else { const p = payState(e); if (p) pill = `<button class="pill ${p.cls}" data-act="paid" data-id="${e.id}">${p.text}</button>`; }
-  const done = e.type === 'retouch'
-    ? `<button class="check ${e.done?'on':''}" data-act="done" data-id="${e.id}" aria-label="${e.done?'Сдано':'Отметить сданной'}">${ICONS.tick}</button>` : '';
-  return `<div class="row ${isPast && !opts.showDate ? 'past':''} ${e.type==='retouch'&&e.done?'doneRow':''}" data-act="edit" data-id="${e.id}" role="button" tabindex="0">
+  const pr = PRIO[e.prio];
+  const done = checkable(e)
+    ? `<button class="check ${e.done?'on':''}" data-act="done" data-id="${e.id}" aria-label="${e.done?'Сделано':'Отметить сделанным'}">${ICONS.tick}</button>` : '';
+  return `<div class="row ${isPast && !opts.showDate ? 'past':''} ${checkable(e)&&e.done?'doneRow':''}" ${pr ? `style="--pc:${pr.color}"` : ''} data-act="edit" data-id="${e.id}" role="button" tabindex="0">
     ${done || `<span class="ic" style="--c:${t.color}">${iconFor(e)}</span>`}
-    <div class="rt"><div class="t1">${esc(e.title || t.one)}</div><div class="t2">${esc(bits.join(' · '))}</div></div>
+    <div class="rt"><div class="t1">${pr && !opts.inPrio ? `<span class="prio-e">${pr.emoji}</span>` : ''}${done && e.emoji ? esc(e.emoji) + ' ' : ''}${esc(e.title || t.one)}</div><div class="t2">${esc(bits.join(' · '))}</div></div>
     <div class="rr">${opts.extraPill || ''}${amount ? `<div class="amt">${rub(amount)}</div>` : ''}${pill}</div>
   </div>`;
 }
@@ -1004,20 +1060,107 @@ function calNav(k){
   ui.month = ui.selDate.slice(0,7);
   render();
 }
+// список записей: сначала блоки приоритетов (только те уровни, что выставлены), ниже — всё остальное как обычно
+function prioList(list, opts = {}){
+  const rows = l => `<div class="list glass">${l.map(e => entryRow(e, opts)).join('')}</div>`;
+  const groups = [3, 2, 1].map(p => [p, list.filter(e => e.prio === p)]).filter(([, l]) => l.length);
+  if (!groups.length) return rows(list);
+  const rest = list.filter(e => !PRIO[e.prio]);
+  const rowsP = l => `<div class="list glass">${l.map(e => entryRow(e, {...opts, inPrio:true})).join('')}</div>`;
+  return groups.map(([p, l]) => `<div class="prio-h" style="--pc:${PRIO[p].color}">${PRIO[p].emoji} ${PRIO[p].name}</div>${rowsP(l)}`).join('')
+    + (rest.length ? `<div class="prio-h" style="--pc:var(--fg2)">Остальное</div>${rows(rest)}` : '');
+}
 function evChip(e){
-  const t = TYPES[e.type] || TYPES.other;
-  const lead = e.type === 'retouch' ? (e.done ? 'Сдано: ' : 'Сдать: ') : e.time ? e.time + ' ' : '';
-  return `<button class="chipev ${e.type==='retouch'&&e.done?'done':''}" style="--c:${t.color}" data-act="edit" data-id="${e.id}">${esc(lead)}${esc(e.title || t.one)}${clientName(e) ? `<span> · ${esc(clientName(e))}</span>` : ''}</button>`;
+  const t = TYPES[e.type] || TYPES.other, pr = PRIO[e.prio];
+  const lead = e.type === 'retouch' ? (e.done ? 'Сдано' : 'Сдать') + (e.time ? ' до ' + e.time : '') + ': ' : e.time ? e.time + ' ' : '';
+  return `<button class="chipev ${checkable(e)&&e.done?'done':''}" style="--c:${t.color}" data-act="edit" data-id="${e.id}">${pr ? pr.emoji + ' ' : ''}${e.emoji ? esc(e.emoji) + ' ' : ''}${esc(lead)}${esc(e.title || t.one)}${clientName(e) ? `<span> · ${esc(clientName(e))}</span>` : ''}</button>`;
+}
+
+/* --- вкладка «Главная»: сегодня, не закрыто, ближайшее, цель, долги --- */
+const nowMin = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); };
+// дела и дедлайны, которые прошли, а галочку не поставили
+function overdueList(){
+  const t = today(), m = nowMin();
+  return data.entries.filter(e => checkable(e) && !e.done && e.date && (e.date < t ||
+      (e.date === t && e.time && toMin(e.time) + (e.type === 'task' ? durOf(e) : 0) <= m)))
+    .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+}
+function renderHome(){
+  const t = today(), d = parseD(t);
+  const wd = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'][d.getDay()];
+  let h = `<div class="stack">` + installBanner() + recapBanner();
+  h += `<div class="home-date">${wd}, ${d.getDate()} ${MONTHS_G[d.getMonth()]}</div>`;
+
+  // не закрыто — с кнопкой «Перенести»
+  const od = overdueList();
+  if (od.length){
+    h += `<div class="section-title">Не закрыто · ${od.length}</div><div class="section-note">Отметь сделанным или перенеси на другой день.</div>`;
+    h += `<div class="list glass">${od.map(e => entryRow(e, {showDate:true, extraPill:`<button class="pill late" data-act="resched" data-id="${e.id}">Перенести</button>`})).join('')}</div>`;
+  }
+
+  // цель месяца и долги — две плитки
+  const ym = t.slice(0, 7), s = stats(ym), earned = earnedIn(ym);
+  const pct = data.goal ? Math.min(999, Math.round(earned / data.goal * 100)) : null;
+  h += `<div class="stats">
+    <button class="card glass stat" data-act="${data.goal ? 'tab' : 'goal'}" data-tab="money"><div class="label">Цель на ${MONTHS[+ym.slice(5)-1]}</div>
+      <b>${pct === null ? 'Задать' : pct + '%'}</b><span>${pct === null ? 'сколько хочешь заработать' : data.goal > earned ? 'ещё ' + rub(data.goal - earned) : 'цель выполнена 🎉'}</span>
+      ${pct === null ? '' : `<div class="bar" style="margin:10px 0 0;height:6px"><i style="width:${Math.min(100, pct)}%;background:var(--grad-warm)"></i></div>`}</button>
+    <button class="card glass stat" data-act="tab" data-tab="money"><div class="label">Ждёт оплаты</div><b>${s.unpaid ? shortRub(s.unpaid) : '0'}</b><span>${s.unpaid ? rub(s.unpaid) : 'все оплатили 👌'}</span></button>
+  </div>`;
+
+  // сегодня
+  const todayList = (byDate()[t] || []).filter(e => !od.includes(e));
+  h += `<div class="section-title">Сегодня</div>`;
+  h += todayList.length ? prioList(todayList)
+    : `<button class="card glass empty" data-act="new-on" data-d="${t}" style="padding:18px;width:100%"><b style="font-size:16px">Сегодня свободно</b><p>Нажми, чтобы что-то запланировать</p></button>`;
+
+  // ближайшее — следующие 5 записей после сегодня
+  const next = data.entries.filter(e => e.date > t && !(checkable(e) && e.done))
+    .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || ''))).slice(0, 5);
+  if (next.length) h += `<div class="section-title">Ближайшее</div><div class="list glass">${next.map(e => entryRow(e, {showDate:true})).join('')}</div>`;
+  return h + `</div>`;
+}
+
+// перенос записи на другой день и время
+function reschedSheet(e){
+  const t = today(), tm = e.time || (e.type === 'retouch' ? '' : '10:00');
+  const opts = [
+    ['Сегодня вечером', t, '19:00'], ['Завтра', shiftDay(t, 1), tm], ['Послезавтра', shiftDay(t, 2), tm], ['Через неделю', shiftDay(t, 7), tm]
+  ];
+  openSheet(`${head('Перенести')}
+    <p class="hint" style="margin:0 6px 12px">«${esc(e.title || TYPES[e.type].one)}» — ${shortDate(e.date)}${e.time ? ' в ' + e.time : ''}. Куда переставить?</p>
+    <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:14px">${opts.map(([l, d, tt]) => `<button class="row" data-act="resched-to" data-id="${e.id}" data-d="${d}" data-t="${tt}" style="min-height:52px">
+      <div class="rt"><div class="t1">${l}</div><div class="t2">${dayLabel(d)}${tt ? ' · ' + tt : ''}</div></div><span class="chev">${ICONS.right}</span></button>`).join('')}</div>
+    <form id="reschedForm" class="form"><div class="field"><label for="rs-d">Дата</label><input type="date" id="rs-d" value="${shiftDay(t, 1)}"></div>
+      <div class="field"><label for="rs-t">Время</label><input type="time" id="rs-t" value="${esc(tm)}"></div></form>
+    <div class="actions"><button class="btn primary" data-act="resched-custom" data-id="${e.id}">Перенести на эту дату</button>
+      <button class="btn tinted" data-act="done" data-id="${e.id}">${ICONS.tick}Нет, уже сделано</button></div>`);
+}
+function moveEntry(id, d, tm){
+  const e = data.entries.find(x => x.id === id); if (!e) return;
+  e.date = d; if (tm !== undefined) e.time = tm; touch(e); persist();
+  ui.selDate = d; ui.month = d.slice(0, 7);
+  closeSheet(); render(); toast(`Перенесено на ${dayLabel(d).toLowerCase()}${tm ? ' в ' + tm : ''}`);
+}
+// при запуске раз в день: «ты не закрыл(а) …, переставить?»
+function askOverdue(){
+  if (!overdueList().length || sheetOpen()) return;
+  let asked = ''; try { asked = localStorage.getItem('kadr.overdueAsked') || ''; } catch(e) {}
+  if (asked === today()) return;
+  try { localStorage.setItem('kadr.overdueAsked', today()); } catch(e) {}
+  overdueSheet();
+}
+function overdueSheet(){
+  const od = overdueList();
+  openSheet(`${head(od.length === 1 ? 'Не закрыто' : 'Не закрыто · ' + od.length)}
+    <p class="hint" style="margin:0 6px 12px">${od.length === 1 ? g('Ты не отметил[а|] это сделанным. Перенести на другой день?') : g('Ты не отметил[а|] их сделанными. Нажми на «Перенести» или поставь галочку.')}</p>
+    <div class="list" id="odList" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:12px">${od.map(e => entryRow(e, {showDate:true, extraPill:`<button class="pill late" data-act="resched" data-id="${e.id}">Перенести</button>`})).join('')}</div>
+    <button class="btn tinted" data-act="close">Позже</button>`);
 }
 
 function renderPlan(){
+  // фразы — только на заставке при запуске; баннеры — на «Главной»
   let h = `<div class="stack">`;
-  h += installBanner();
-  h += `<button class="card glass phrase" data-act="phrase">
-      <span class="spark">${ICONS.spark}</span>
-      <p>${esc(phrase(ui.phrase))}<small>Нажми, чтобы получить ещё</small></p>
-    </button>`;
-  h += recapBanner();
   loadWeather();
   const views = [['day','День'],['week','Неделя'],['month','Месяц']];
   h += `<div class="seg glass-seg" role="radiogroup" aria-label="Вид календаря">${views.map(([k,l]) => `<label><input type="radio" name="calview" value="${k}" data-act="calview" ${ui.calView===k?'checked':''}><span>${l}</span></label>`).join('')}</div>`;
@@ -1117,7 +1260,7 @@ function calMonth(map){
   const list = map[ui.selDate] || [];
   const sum = list.reduce((a,e) => a + (+e.amount||0), 0);
   h += `<div class="day ${ui.selDate===t?'today':''}"><span>${dayLabel(ui.selDate)}</span><span class="num">${sum?rub(sum):''}</span></div>`;
-  h += list.length ? `<div class="list glass">${list.map(e => entryRow(e)).join('')}</div>`
+  h += list.length ? prioList(list)
     : `<button class="card glass empty" data-act="new-on" data-d="${ui.selDate}" style="padding:20px;width:100%"><b style="font-size:16px">Свободный день</b><p>Нажми, чтобы добавить запись</p></button>`;
   return h;
 }
@@ -1429,6 +1572,27 @@ function closeSheet(){
   openSheet.t = setTimeout(() => { sh.hidden = true; sc.hidden = true; sh.innerHTML = ''; }, 380);
 }
 const sheetOpen = () => !$('#sheet').hidden && $('#sheet').classList.contains('show');
+// шторка закрывается свайпом вниз (когда она прокручена до самого верха)
+(function(){
+  const sh = $('#sheet'); let y0 = null, dy = 0, drag = false;
+  sh.addEventListener('touchstart', e => { y0 = sh.scrollTop <= 0 ? e.touches[0].clientY : null; dy = 0; drag = false; }, {passive:true});
+  sh.addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy > 6 && sh.scrollTop <= 0){
+      drag = true; e.preventDefault();
+      sh.style.transition = 'none'; sh.style.transform = `translateY(${dy}px)`;
+      $('#scrim').style.opacity = String(Math.max(0, 1 - dy / 400));
+    } else if (dy < 0) y0 = null;
+  }, {passive:false});
+  sh.addEventListener('touchend', () => {
+    if (drag){
+      sh.style.transition = ''; sh.style.transform = ''; $('#scrim').style.opacity = '';
+      if (dy > 110) closeSheet();
+    }
+    y0 = null; drag = false;
+  });
+})();
 function swapSheet(fn){ if (sheetOpen()){ closeSheet(); setTimeout(fn, 260); } else fn(); }
 const head = t => `<div class="sheet-head"><h3>${t}</h3><button class="circle" data-act="close" aria-label="Закрыть">${ICONS.close}</button></div>`;
 const datalist = () => `<datalist id="clientsList">${data.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c => `<option value="${esc(c.name)}"></option>`).join('')}</datalist>`;
@@ -1440,10 +1604,13 @@ function defaultDate(){
 
 function entryForm(e, preset = {}){
   const isNew = !e;
-  e = e || {type: preset.type || 'shoot', date: preset.date || defaultDate(), time: preset.time || '', format:'meet', paid:false, clientId: preset.clientId || ''};
+  e = e || {type: preset.type || 'shoot', title: preset.title || '', emoji: preset.emoji || '', date: preset.date || defaultDate(), time: preset.time || '', format:'meet', paid:false, clientId: preset.clientId || ''};
   const cn = e.clientId ? (clientById(e.clientId) || {}).name || '' : e.client || '';
   const seg = visTypes().map(k => [k, TYPES[k]]).map(([k,t]) => `<label><input type="radio" name="f-type" value="${k}" ${e.type===k?'checked':''}><span>${t.one}</span></label>`).join('');
-  openSheet(`${head(isNew ? 'Новая запись' : 'Запись')}
+  // шаблоны сообщений — маленькой кнопкой ✉️ в шапке и только если есть клиент
+  const tplBtn = !isNew && e.type !== 'task' && (e.clientId || e.client) ? `<button type="button" class="mini" data-act="tpl-for" data-id="${e.id}" aria-label="Шаблоны сообщений">✉️</button>` : '';
+  const emojiOpts = ['', ...EMOJIS];
+  openSheet(`<div class="sheet-head"><h3>${isNew ? 'Новая запись' : 'Запись'}</h3>${tplBtn}<button class="circle" data-act="close" aria-label="Закрыть">${ICONS.close}</button></div>
     <form id="entryForm" autocomplete="off">
       <div class="seg" role="radiogroup" aria-label="Тип">${seg}</div>
       <div class="chips pk" id="pkgChips"></div>
@@ -1461,8 +1628,15 @@ function entryForm(e, preset = {}){
       </div>
       <div class="form">
         <div class="field"><label for="f-date" id="l-date">${e.type==='retouch'?'Сдать до':'Дата'}</label><input type="date" id="f-date" name="date" value="${esc(e.date)}" required></div>
-        <div class="field" id="timeField" ${e.type==='retouch'?'hidden':''}><label for="f-time">Время</label><input type="time" id="f-time" name="time" value="${esc(e.time||'')}"></div>
+        <div class="field" id="timeField"><label for="f-time" id="l-time">${e.type==='retouch'?'Сдать к':'Время'}</label><input type="time" id="f-time" name="time" value="${esc(e.time||'')}"></div>
         <div class="field" id="durField" ${e.type==='retouch'?'hidden':''}><label for="f-dur">Длительность</label><select id="f-dur" name="dur">${DURS.map(([v,l]) => `<option value="${v}" ${durOf(e)===v?'selected':''}>${l}</option>`).join('')}</select></div>
+      </div>
+      <div class="form">
+        <div class="field"><label style="width:auto;margin-right:auto">Приоритет</label>
+          <div class="seg prio-seg" style="margin:0;flex:none;width:190px" role="radiogroup" aria-label="Приоритет">${[[0,'—'],[1,'😴'],[2,'⚡'],[3,'🔥']].map(([v,l]) => `<label><input type="radio" name="prio" value="${v}" ${(e.prio||0)===v?'checked':''}><span>${l}</span></label>`).join('')}</div></div>
+        <button type="button" class="field icon-pick" id="iconPick"><label style="width:auto">Иконка</label><span class="cur" id="iconCur">${e.emoji ? esc(e.emoji) : iconFor({...e, emoji:''})}</span></button>
+        <input type="hidden" name="emoji" id="f-emoji" value="${esc(e.emoji||'')}">
+        <div class="emoji-grid" id="emojiGrid" hidden>${emojiOpts.map(x => `<button type="button" data-emo="${x}" class="${(e.emoji||'')===x?'on':''}">${x || '<span style="font-size:13px;font-weight:600;color:var(--fg2)">Нет</span>'}</button>`).join('')}</div>
       </div>
       <div id="sunInfo" class="sunbox"></div>
       <div class="form" id="payBox" ${e.type==='task'?'hidden':''}>
@@ -1470,18 +1644,25 @@ function entryForm(e, preset = {}){
         <div class="field"><label for="f-pre">Предоплата, ₽</label><input id="f-pre" name="prepaid" inputmode="decimal" value="${e.prepaid||''}" placeholder="0"></div>
         <div class="field"><label for="f-paid" style="width:auto">Оплачено полностью</label><input type="checkbox" class="sw" id="f-paid" name="paid" ${e.paid?'checked':''}></div>
       </div>
-      <div class="form" id="doneBox" ${e.type==='retouch'?'':'hidden'}>
-        <div class="field"><label for="f-done" style="width:auto">${prof().post.done}</label><input type="checkbox" class="sw" id="f-done" name="done" ${e.done?'checked':''}></div>
+      <div class="form" id="doneBox" ${checkable(e)?'':'hidden'}>
+        <div class="field"><label for="f-done" style="width:auto" id="l-done">${e.type==='task'?'Сделано':prof().post.done}</label><input type="checkbox" class="sw" id="f-done" name="done" ${e.done?'checked':''}></div>
       </div>
       <div class="form"><div class="field col"><label for="f-note">Заметка</label><textarea id="f-note" name="note" rows="2" placeholder="${e.type==='task'?'С кем, что взять с собой…':'Локация, образы, пожелания…'}">${esc(e.note||'')}</textarea></div></div>
       <div class="actions">
         <button type="submit" class="btn primary">${isNew ? 'Добавить' : 'Сохранить'}</button>
-        ${isNew ? '' : `<button type="button" class="btn tinted" data-act="tpl-for" data-id="${e.id}">✉️ Шаблоны сообщений</button>
-        <button type="button" class="btn danger" data-act="del-entry" data-id="${e.id}">Удалить</button>`}
+        ${isNew ? '' : `<button type="button" class="btn danger" data-act="del-entry" data-id="${e.id}">Удалить</button>`}
       </div>
     </form>`);
   const form = $('#entryForm');
   const curType = () => form.querySelector('input[name="f-type"]:checked').value;
+  $('#iconPick').addEventListener('click', () => { $('#emojiGrid').hidden = !$('#emojiGrid').hidden; });
+  $('#emojiGrid').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-emo]'); if (!b) return;
+    const v = b.dataset.emo; $('#f-emoji').value = v;
+    $('#emojiGrid').querySelectorAll('[data-emo]').forEach(x => x.classList.toggle('on', x === b));
+    $('#iconCur').innerHTML = v ? esc(v) : iconFor({type:curType(), format:'meet'});
+    $('#emojiGrid').hidden = true;
+  });
   // услуги из прайса для выбранного типа
   function syncPkgs(){
     if (curType() === 'task'){ $('#pkgChips').innerHTML = ''; return; }
@@ -1526,9 +1707,11 @@ function entryForm(e, preset = {}){
     if (ev.target.name !== 'f-type') return;
     const t = ev.target.value;
     $('#formatSeg').hidden = t !== 'lesson';
-    $('#timeField').hidden = t === 'retouch';
+    $('#l-time').textContent = t === 'retouch' ? 'Сдать к' : 'Время';
     $('#durField').hidden = t === 'retouch';
-    $('#doneBox').hidden = t !== 'retouch';
+    $('#doneBox').hidden = !(t === 'retouch' || t === 'task');
+    $('#l-done').textContent = t === 'task' ? 'Сделано' : prof().post.done;
+    if (!$('#f-emoji').value) $('#iconCur').innerHTML = iconFor({type:t, format:'meet'});
     $('#l-date').textContent = t === 'retouch' ? 'Сдать до' : 'Дата';
     $('#l-client').textContent = t === 'lesson' ? prof().student : 'Клиент';
     $('#clientField').hidden = t === 'task';
@@ -1550,12 +1733,13 @@ function entryForm(e, preset = {}){
     const rec = {
       id: e.id || uid(), type,
       title: fd.get('title').trim(), clientId: cid, client: type === 'task' ? '' : (fd.get('client') || '').trim(), place: (fd.get('place') || '').trim(),
-      date: fd.get('date') || defaultDate(), time: type === 'retouch' ? '' : fd.get('time') || '',
+      date: fd.get('date') || defaultDate(), time: fd.get('time') || '',
+      prio: +fd.get('prio') || 0, emoji: fd.get('emoji') || '',
       dur: type === 'retouch' ? undefined : +fd.get('dur') || 60,
       format: type === 'lesson' ? fd.get('f-format') : undefined,
       subId: subId || undefined,
       amount, prepaid, paid: !!fd.get('paid') || (amount > 0 && prepaid >= amount),
-      done: type === 'retouch' ? !!fd.get('done') : undefined,
+      done: type === 'retouch' || type === 'task' ? !!fd.get('done') : undefined,
       note: fd.get('note').trim(), created: e.created || Date.now(), u: Date.now()
     };
     if (isNew) data.entries.push(rec); else data.entries[data.entries.findIndex(x => x.id === e.id)] = rec;
@@ -1602,21 +1786,28 @@ function expenseForm(x){
   });
 }
 
-function addChooser(){
+// «+»: три раздела — заработок, личное (без денег), учёт; внутри — варианты
+function addChooser(sec){
+  sec = sec || addChooser.last || 'work'; addChooser.last = sec;
   const item = (act, attrs, color, icon, t1, t2) => `<button class="row" data-act="${act}" ${attrs}><span class="ic" style="--c:${color}">${icon}</span><div class="rt"><div class="t1">${t1}</div><div class="t2">${t2}</div></div></button>`;
+  const secs = [['work','💰','Заработок'],['life','🗓️','Личное'],['books','📒','Учёт']];
+  const student = prof().student === 'Ученица' ? 'ученицей' : 'учеником';
+  let list = '';
+  if (sec === 'work') list = item('new-entry','data-type="shoot"',TYPES.shoot.color,ICONS.shoot,TYPES.shoot.one,'Дата, время, сумма и предоплата')
+    + (postOn() ? item('new-entry','data-type="retouch"',TYPES.retouch.color,ICONS.retouch,TYPES.retouch.one,prof().post.sub) : '')
+    + item('new-entry','data-type="lesson"',TYPES.lesson.color,ICONS.lesson,'Встреча или созвон с ' + student,'Можно списать с абонемента')
+    + item('new-entry','data-type="other"',TYPES.other.color,ICONS.other,'Другой доход',prof().types.other.ph);
+  else if (sec === 'life'){
+    const presets = [['☕️','Встреча с друзьями'],['🏋️','Спорт'],['🩺','Врач'],['🛒','Покупки'],['🏠','Дела по дому'],['🎂','День рождения']];
+    list = item('new-entry','data-type="task"',TYPES.task.color,ICONS.task,'Дело','Своё название, время занято — без денег')
+      + presets.map(([em, t]) => `<button class="row" data-act="new-entry" data-type="task" data-title="${t}" data-emoji="${em}"><span class="ic" style="--c:var(--green)"><span class="emo">${em}</span></span><div class="rt"><div class="t1">${t}</div><div class="t2">Дело без денег</div></div></button>`).join('');
+  } else list = item('new-client','','var(--green)',ICONS.client,'Клиент','Имя, телефон, Instagram')
+    + item('new-sub','','var(--indigo)',ICONS.sub,'Абонемент','Пакет занятий для ' + (prof().student === 'Ученица' ? 'ученицы' : 'ученика'))
+    + item('add-exp','','var(--gray)',ICONS.expense,'Расход','Аренда техники, студия, софт…');
   openSheet(`${head('Добавить')}
-    <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:12px">
-      ${item('new-entry','data-type="shoot"',TYPES.shoot.color,ICONS.shoot,TYPES.shoot.one,'Дата, время, сумма и предоплата')}
-      ${!postOn() ? '' : item('new-entry','data-type="retouch"',TYPES.retouch.color,ICONS.retouch,TYPES.retouch.one,prof().post.sub)}
-      ${item('new-entry','data-type="lesson"',TYPES.lesson.color,ICONS.lesson,'Встреча или созвон с ' + (prof().student === 'Ученица' ? 'ученицей' : 'учеником'),'Можно списать с абонемента')}
-      ${item('new-entry','data-type="other"',TYPES.other.color,ICONS.other,'Другой доход',prof().types.other.ph)}
-      ${item('new-entry','data-type="task"',TYPES.task.color,ICONS.task,'Дело','Личное: кофе с подругой, спорт, врач — без денег')}
-    </div>
-    <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:6px">
-      ${item('new-client','','var(--green)',ICONS.client,'Клиент','Имя, телефон, Instagram')}
-      ${item('new-sub','','var(--indigo)',ICONS.sub,'Абонемент','Пакет занятий для ' + (prof().student === 'Ученица' ? 'ученицы' : 'ученика'))}
-      ${item('add-exp','','var(--gray)',ICONS.expense,'Расход','Аренда техники, студия, софт…')}
-    </div>`);
+    <div class="add-secs">${secs.map(([k, em, l]) => `<button class="add-sec ${k === sec ? 'on' : ''}" data-act="add-sec" data-s="${k}"><span>${em}</span>${l}</button>`).join('')}</div>
+    <p class="hint" style="margin:0 6px 10px">${sec === 'work' ? 'Записи, которые приносят деньги.' : sec === 'life' ? 'Личное время — в календаре, но без денег.' : 'Клиенты, абонементы и расходы.'}</p>
+    <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:6px">${list}</div>`);
 }
 
 function goalForm(){
@@ -1734,6 +1925,17 @@ async function syncNow(){
 }
 window.addEventListener('online', () => syncNow());
 
+// раздельные регистрация и вход (привычный порядок: сначала зарегистрироваться, потом входить)
+async function signUp(email, password){
+  try { const j = await authReq('signup', {email, password}); if (!j.access_token) throw {code:'confirm_required'}; saveSession(j); }
+  catch(e){ if (e.code === 'user_already_exists') throw {code:'exists'}; throw e; }
+}
+async function logIn(email, password){
+  try { saveSession(await authReq('token?grant_type=password', {email, password})); }
+  catch(e){ if (e.code === 'invalid_credentials') throw {code:'bad_login'}; throw e; }
+}
+const AUTH_ERR = {exists:'Такой аккаунт уже есть — переключись на «Вход»', bad_login:'Неверная почта или пароль', weak_password:'Пароль слишком простой, нужно хотя бы 6 символов',
+  email_address_invalid:'Проверь адрес почты', validation_failed:'Проверь почту и пароль', over_request_rate_limit:'Слишком много попыток, подожди минуту', confirm_required:'Нужно подтвердить почту — проверь письмо'};
 async function signIn(email, password){
   try { saveSession(await authReq('token?grant_type=password', {email, password})); return 'in'; }
   catch(e){
@@ -1820,18 +2022,23 @@ function settingsSheet(){
     </form>
     <div id="pushBox" style="margin-bottom:22px"></div>`
   : `
-    <p class="hint" style="margin:0 6px 12px">Войди, чтобы данные хранились в облаке и не терялись, а на телефон приходили напоминания о ${prof().unit.prep}${postOn() ? ' и сроках ' + prof().post.gen : ''}. Если аккаунта ещё нет, он создастся сам.</p>
+    <p class="hint" style="margin:0 6px 12px">С аккаунтом данные хранятся в облаке и не теряются, а на телефон приходят напоминания о ${prof().unit.prep}${postOn() ? ' и сроках ' + prof().post.gen : ''}.</p>
     <form id="loginForm" autocomplete="on">
+      <div class="seg" role="radiogroup" aria-label="Регистрация или вход">
+        <label><input type="radio" name="auth-mode" value="up" ${settingsSheet.mode !== 'in' ? 'checked' : ''}><span>Регистрация</span></label>
+        <label><input type="radio" name="auth-mode" value="in" ${settingsSheet.mode === 'in' ? 'checked' : ''}><span>Вход</span></label>
+      </div>
       <div class="form">
         <div class="field"><label for="l-email">Почта</label><input id="l-email" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="off" placeholder="name@mail.ru" required></div>
         <div class="field"><label for="l-pass">Пароль</label><input id="l-pass" name="password" type="password" autocomplete="current-password" placeholder="не короче 6 символов" minlength="6" required></div>
       </div>
-      <button class="btn primary" type="submit" style="margin-bottom:22px">Войти</button>
+      <button class="btn primary" type="submit" style="margin-bottom:22px" id="authBtn">${settingsSheet.mode === 'in' ? 'Войти' : 'Зарегистрироваться'}</button>
     </form>`;
   const p = data.profile || {};
   const menu = (act, icon, color, t1, t2) => `<button class="row" data-act="${act}"><span class="ic" style="--c:${color}">${icon}</span><div class="rt"><div class="t1">${t1}</div>${t2 ? `<div class="t2">${esc(t2)}</div>` : ''}</div><span class="chev">${ICONS.right}</span></button>`;
-  openSheet(`${head('Настройки')}
+  openSheet(`${head('Меню')}
     <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:22px">
+      ${menu('open-history', ICONS.trophy, 'var(--orange)', 'История и итоги', 'Доход по месяцам, картинка для сторис')}
       ${menu('profile', ICONS.client, 'var(--pink)', 'Профиль', [p.name, p.profession === 'custom' ? p.profName : '', p.city && p.city.name].filter(Boolean).join(' · ') || 'Имя и город')}
       ${menu('cal-import', ICONS.cal, 'var(--red)', 'Перенести из календаря', 'Google, Apple или Яндекс')}
       ${menu('pkgs', ICONS.expense, 'var(--orange)', 'Прайс-лист', data.packages.length ? data.packages.length + ' ' + plural(data.packages.length,'услуга','услуги','услуг') : 'Цены подставляются в записи')}
@@ -1856,11 +2063,18 @@ function settingsSheet(){
     persist(); toast('Сохранено');
   });
   const lf = $('#loginForm');
+  if (lf) lf.querySelectorAll('input[name="auth-mode"]').forEach(r => r.addEventListener('change', () => {
+    settingsSheet.mode = r.value; $('#authBtn').textContent = r.value === 'in' ? 'Войти' : 'Зарегистрироваться';
+    $('#l-pass').autocomplete = r.value === 'in' ? 'current-password' : 'new-password';
+  }));
   if (lf) lf.addEventListener('submit', async ev => {
     ev.preventDefault();
-    const btn = lf.querySelector('button'); btn.disabled = true; btn.textContent = 'Вхожу…';
+    const up = settingsSheet.mode !== 'in';
+    const btn = $('#authBtn'); btn.disabled = true; btn.textContent = up ? 'Регистрирую…' : 'Вхожу…';
     try {
-      const res = await signIn($('#l-email').value.trim().toLowerCase(), $('#l-pass').value);
+      const email = $('#l-email').value.trim().toLowerCase(), pw = $('#l-pass').value;
+      if (up) await signUp(email, pw); else await logIn(email, pw);
+      const res = up ? 'new' : 'in';
       sync.state = 'busy'; await syncNow();
       toast(res === 'new' ? 'Аккаунт создан, данные в облаке ☁️' : 'Готово, данные синхронизированы ☁️');
       // пришёл из знакомства «уже есть аккаунт»: если профиля в облаке нет — доводим знакомство
@@ -1868,9 +2082,8 @@ function settingsSheet(){
       applyTheme(data.profile.gender); render();
       settingsSheet();
     } catch(e){
-      const m = {wrong_password:'Неверный пароль', weak_password:'Пароль слишком простой, нужно хотя бы 6 символов', email_address_invalid:'Проверь адрес почты', validation_failed:'Проверь почту и пароль', over_request_rate_limit:'Слишком много попыток, подожди минуту', confirm_required:'Нужно подтвердить почту — проверь письмо'}[e && e.code];
-      toast(m || (navigator.onLine === false ? 'Нет интернета' : 'Не получилось войти'));
-      btn.disabled = false; btn.textContent = 'Войти';
+      toast(AUTH_ERR[e && e.code] || (navigator.onLine === false ? 'Нет интернета' : up ? 'Не получилось зарегистрироваться' : 'Не получилось войти'));
+      btn.disabled = false; btn.textContent = up ? 'Зарегистрироваться' : 'Войти';
     }
   });
 }
@@ -2211,7 +2424,7 @@ function onboarding(){
   const profRow = (k, color) => `<button class="row" data-ob="prof" data-p="${k}"><span class="ic" style="--c:${color}">${PROF_ICONS[k].shoot}</span>
     <div class="rt"><div class="t1">${PROFS[k].name}</div><div class="t2">${PROFS[k].work}</div></div>
     <span class="check ${st.profession === k ? 'on' : ''}">${ICONS.tick}</span></button>`;
-  const dots = () => `<div class="onb-dots">${[0,1,2,3,4,5].map(i => `<i class="${i===st.step?'on':''}"></i>`).join('')}</div>`;
+  const dots = () => `<div class="onb-dots">${[0,1,2,3,4,5,6].map(i => `<i class="${i===st.step?'on':''}"></i>`).join('')}</div>`;
   const draw = () => {
     let body = '', btn = 'Дальше', skip = '';
     if (st.step === 0){
@@ -2237,6 +2450,14 @@ function onboarding(){
     } else if (st.step === 4){
       body = `<h2>Твой город</h2><p>Покажу золотой час, закат и погоду на день съёмки.</p><div id="obCity" style="text-align:left"></div>`;
       skip = `<button class="onb-skip" data-ob="skip">Пропустить</button>`;
+    } else if (st.step === 5){
+      body = st.registered
+        ? `<h2>Аккаунт создан ☁️</h2><p>Записи будут храниться в облаке и не потеряются, даже если сменишь телефон.</p>`
+        : `<h2>Создай аккаунт</h2><p>Записи будут храниться в облаке — не потеряются, даже если сменишь телефон. И будут приходить напоминания.</p>
+        <div class="form" style="text-align:left"><div class="field"><input id="ob-email" type="email" inputmode="email" autocomplete="username" autocapitalize="off" placeholder="Почта" style="text-align:left" value="${esc(st.email||'')}"></div>
+          <div class="field"><input id="ob-pass" type="password" autocomplete="new-password" placeholder="Придумай пароль (от 6 символов)" style="text-align:left"></div></div>`;
+      btn = st.registered ? 'Дальше' : 'Зарегистрироваться';
+      if (!st.registered) skip = `<button class="onb-skip" data-ob="later">Позже</button>`;
     } else {
       body = `<h2>Перенесём твои записи?</h2><p>Возьму ${PROFS[st.profession].unit.many} из календаря телефона за последние полгода и все будущие — календарь сразу будет заполнен.</p>
         <div class="list" style="background:var(--glass);border:1px solid var(--edge);text-align:left">${Object.entries(CAL_SOURCES).map(([k,s]) => `<button class="row" data-ob="cal" data-s="${k}">
@@ -2260,11 +2481,21 @@ function onboarding(){
     ev.stopPropagation();
     if (b.dataset.ob === 'cal'){ finish(b.dataset.s); return; }
     // уже есть аккаунт: входим, профиль и записи приходят из облака, знакомство не нужно
-    if (b.dataset.ob === 'login'){ el.classList.add('hide'); setTimeout(() => el.remove(), 500); onboarding.relaunch = true; settingsSheet(); return; }
+    if (b.dataset.ob === 'login'){ el.classList.add('hide'); setTimeout(() => el.remove(), 500); settingsSheet.mode = 'in'; settingsSheet(); return; }
     if (b.dataset.ob === 'prof'){ st.profession = b.dataset.p; draw(); return; }
     if (b.dataset.ob === 'skip'){ st.city = null; st.step++; draw(); return; }
     if (st.step === 1 && !st.name.trim()){ toast('Напиши, как тебя зовут'); return; }
-    if (st.step === 5){ finish(); return; }
+    if (b.dataset.ob === 'later'){ st.step++; draw(); return; }
+    if (st.step === 5 && !st.registered){
+      const em = (el.querySelector('#ob-email').value || '').trim().toLowerCase(), pw = el.querySelector('#ob-pass').value || '';
+      st.email = em;
+      if (!em || pw.length < 6){ toast('Укажи почту и пароль от 6 символов'); return; }
+      b.disabled = true; b.textContent = 'Регистрирую…';
+      signUp(em, pw).then(() => { st.registered = true; st.step++; draw(); toast('Аккаунт создан ☁️'); })
+        .catch(e => { b.disabled = false; b.textContent = 'Зарегистрироваться'; toast(AUTH_ERR[e && e.code] || (navigator.onLine === false ? 'Нет интернета' : 'Не получилось зарегистрироваться')); });
+      return;
+    }
+    if (st.step === 6){ finish(); return; }
     st.step++;
     // золотой час бьюти не нужен — шаг с городом пропускаем
     if (st.step === 4 && !PROFS[st.profession].sun){ st.city = null; st.step++; }
@@ -2545,7 +2776,8 @@ document.addEventListener('click', ev => {
     }
     case 'phrase': ui.phrase = (ui.phrase + 1 + Math.floor(Math.random()*(PHRASES.length-1))) % PHRASES.length; render(); break;
     case 'add': addChooser(); break;
-    case 'new-entry': swapSheet(() => entryForm(null, {type: el.dataset.type})); break;
+    case 'new-entry': swapSheet(() => entryForm(null, {type: el.dataset.type, title: el.dataset.title, emoji: el.dataset.emoji})); break;
+    case 'add-sec': addChooser(el.dataset.s); break;
     case 'new-for-client': swapSheet(() => entryForm(null, {clientId: id, type: clientStats(id).isStudent && !clientStats(id).shoots ? 'lesson' : 'shoot'})); break;
     case 'new-client': swapSheet(() => clientForm(null)); break;
     case 'new-sub': swapSheet(() => subForm(null, id || '')); break;
@@ -2555,17 +2787,33 @@ document.addEventListener('click', ev => {
     case 'edit-sub': swapSheet(() => subForm(subById(id))); break;
     case 'client': swapSheet(() => clientSheet(id)); break;
     case 'edit-client': swapSheet(() => clientForm(clientById(id))); break;
-    case 'paid': { const e = data.entries.find(x => x.id === id); e.paid = !e.paid; touch(e); persist(); render(); toast(e.paid ? 'Оплата получена 💸' : 'Отмечено как неоплаченное'); break; }
-    case 'paid-sub': { const s = subById(id); s.paid = !s.paid; touch(s); persist(); render(); toast(s.paid ? 'Абонемент оплачен 💸' : 'Отмечено как неоплаченное'); break; }
+    // случайное нажатие на «Ждёт оплаты» легко отменить
+    case 'paid': case 'paid-sub': {
+      const x = a === 'paid' ? data.entries.find(y => y.id === id) : subById(id); if (!x) break;
+      const flip = () => { x.paid = !x.paid; touch(x); persist(); render(); };
+      flip();
+      const what = x.title || (a === 'paid-sub' ? 'Абонемент' : TYPES[x.type] ? TYPES[x.type].one : 'Запись');
+      toast(x.paid ? `«${what}» — оплачено 💸` : `«${what}» — снова ждёт оплаты`, flip);
+      break;
+    }
     case 'done': {
-      const e = data.entries.find(x => x.id === id); e.done = !e.done; touch(e); persist(); render();
+      const e = data.entries.find(x => x.id === id); e.done = !e.done; touch(e); persist();
+      // в окне «Не закрыто» — обновляем список; в окне переноса («уже сделано») — закрываем
+      if ($('#odList')) { overdueList().length ? overdueSheet() : closeSheet(); }
+      else if (sheetOpen() && !el.closest('.row')) closeSheet();
+      render();
+      if (e.type === 'task'){ toast(e.done ? 'Дело сделано ✓' : 'Дело снова в планах'); break; }
       const zero = e.done && !data.entries.some(x => x.type === 'retouch' && !x.done);
       if (!zero) toast(e.done ? prof().post.done + '. Так держать!' : prof().post.back);
       checkAch({retouchZero: zero});
       break;
     }
+    case 'resched': swapSheet(() => reschedSheet(data.entries.find(x => x.id === id))); break;
+    case 'resched-to': moveEntry(id, el.dataset.d, el.dataset.t); break;
+    case 'resched-custom': { const d = $('#rs-d').value; if (!d){ toast('Выбери дату'); break; } moveEntry(id, d, $('#rs-t').value); break; }
     case 'goal': swapSheet(goalForm); break;
     case 'settings': settingsSheet(); break;
+    case 'open-history': closeSheet(); ui.tab = 'history'; render(); scrollTo({top:0}); break;
     case 'profile': swapSheet(profileSheet); break;
     case 'recap': swapSheet(() => recapSheet(el.dataset.m)); break;
     case 'pkgs': swapSheet(packagesSheet); break;
@@ -2614,9 +2862,15 @@ document.addEventListener('keydown', ev => {
 });
 
 let toastT;
-function toast(msg){
+// toast(msg) — подсказка сверху; toast(msg, undo) — с кнопкой «Отменить» (5 секунд)
+function toast(msg, undo){
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200);
+  if (undo){
+    const b = document.createElement('button'); b.className = 'toast-undo'; b.textContent = 'Отменить';
+    b.onclick = ev => { ev.stopPropagation(); clearTimeout(toastT); t.classList.remove('show'); undo(); };
+    t.appendChild(b);
+  }
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), undo ? 5000 : 2200);
 }
 
 /* ---------- заставка с фразой ---------- */
@@ -2643,7 +2897,7 @@ window.addEventListener('resize', () => { if (ui.tab === 'history') drawChart();
 applyTheme(data.profile && data.profile.gender);
 render();
 // первый запуск — знакомство вместо заставки
-if (!data.profile){ $('#splash').hidden = true; onboarding(); } else showSplash();
+if (!data.profile){ $('#splash').hidden = true; onboarding(); } else { showSplash(); setTimeout(askOverdue, 3300); }
 syncNow();
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
