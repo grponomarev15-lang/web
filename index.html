@@ -11,7 +11,14 @@
 <meta name="theme-color" content="#f4f1f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b0a10" media="(prefers-color-scheme: dark)">
 <!-- тема «он» включается до первой отрисовки, иначе полсекунды мигает розовая -->
-<script>try{var d=JSON.parse(localStorage.getItem('kadr.v1'));if(d&&d.profile&&d.profile.gender==='m'){document.documentElement.setAttribute('data-g','m');document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content','#07090a')})}}catch(e){}</script>
+<script>
+// 15 цветов фона на выбор: [оттенок, насыщенность, название]
+var LOOK_COLORS=[[340,85,'Розовый'],[5,80,'Красный'],[18,85,'Коралловый'],[32,90,'Оранжевый'],[48,90,'Жёлтый'],[80,70,'Лайм'],[130,55,'Зелёный'],[160,60,'Мятный'],[180,65,'Бирюзовый'],[200,80,'Голубой'],[222,75,'Синий'],[245,65,'Индиго'],[270,65,'Фиолетовый'],[295,55,'Сиреневый'],[0,0,'Графит']];
+function lookVars(look){var r=document.documentElement,c=(look&&look.c)||[];
+  if(look&&look.mode&&look.mode!=='auto')r.setAttribute('data-mode',look.mode);else r.removeAttribute('data-mode');
+  if(c.length){r.setAttribute('data-look','1');for(var i=0;i<3;i++){var k=LOOK_COLORS[c[i%c.length]]||LOOK_COLORS[0];r.style.setProperty('--h'+(i+1),k[0]);r.style.setProperty('--s'+(i+1),k[1]+'%');}}else r.removeAttribute('data-look');}
+try{var d=JSON.parse(localStorage.getItem('kadr.v1'));if(d&&d.profile&&d.profile.gender==='m')document.documentElement.setAttribute('data-g','m');lookVars(d&&d.settings&&d.settings.look);}catch(e){}
+</script>
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -66,6 +73,38 @@
   --splash:radial-gradient(120% 80% at 20% 10%,#2d6a12 0%,transparent 55%),radial-gradient(100% 70% at 90% 90%,#0d4a44 0%,transparent 60%),#050807;
   color-scheme:dark;
 }
+/* своё оформление (Меню → Оформление): режим фона и до трёх цветов пятен; режим главнее темы пола */
+:root{--bl:80%}
+@media (prefers-color-scheme: dark){:root{--bl:30%}}
+:root[data-g="m"]{--bl:24%}
+:root[data-mode="light"]{
+  --base:#f4f1f7; --bl:80%;
+  --fg:#1c1c1e; --fg2:rgba(60,60,67,.64); --fg3:rgba(60,60,67,.34);
+  --glass:rgba(255,255,255,.52); --glass-strong:rgba(255,255,255,.78);
+  --edge:rgba(255,255,255,.75); --hi:rgba(255,255,255,.95);
+  --shadow:rgba(90,40,100,.13); --sep:rgba(60,60,67,.13); --fill:rgba(118,118,128,.12);
+  --pink:#ff2d55; --teal:#12a4bb; --orange:#ff9500; --indigo:#5856d6; --green:#28b14c; --red:#ff3b30; --gray:#8e8e93;
+  color-scheme:light;
+}
+:root[data-g="m"][data-mode="light"]{--accent:#3d9b00; --on-accent:#fff}
+:root[data-mode="dark"],:root[data-mode="black"]{
+  --base:#0b0a10; --bl:30%;
+  --fg:#fff; --fg2:rgba(235,235,245,.62); --fg3:rgba(235,235,245,.3);
+  --glass:rgba(38,34,48,.46); --glass-strong:rgba(44,40,56,.82);
+  --edge:rgba(255,255,255,.13); --hi:rgba(255,255,255,.22);
+  --shadow:rgba(0,0,0,.45); --sep:rgba(84,84,88,.5); --fill:rgba(118,118,128,.24);
+  --pink:#ff375f; --teal:#40c8e0; --orange:#ff9f0a; --indigo:#7d7aff; --green:#30d158; --red:#ff453a; --gray:#98989d;
+  color-scheme:dark;
+}
+:root[data-mode="black"]{--base:#000; --bl:16%; --glass:rgba(28,28,30,.55); --glass-strong:rgba(28,28,30,.9); --edge:rgba(255,255,255,.1)}
+:root[data-mode="black"] .bg i{opacity:.6}
+:root[data-look] .bg i:nth-child(1){background:hsl(var(--h1) var(--s1) var(--bl))}
+:root[data-look] .bg i:nth-child(2){background:hsl(var(--h2) var(--s2) var(--bl))}
+:root[data-look] .bg i:nth-child(3){background:hsl(var(--h3) var(--s3) var(--bl))}
+.swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:16px;margin-bottom:12px}
+.swatch{position:relative;aspect-ratio:1;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);transition:transform .2s}
+.swatch.on{transform:scale(.88);box-shadow:0 0 0 3px var(--base),0 0 0 5px var(--fg)}
+.swatch b{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:15px;text-shadow:0 1px 3px rgba(0,0,0,.4)}
 .bg i{transition:background .6s ease}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;min-height:100%;background:var(--base);color:var(--fg)}
@@ -518,7 +557,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.4', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.5', tg:'gog_sonn'};
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
@@ -775,10 +814,39 @@ function applyProfession(){
   if (Array.isArray(data.templates)) data.templates = data.templates.map(t => !t.u && tpl[t.id] ? {...t, ...tpl[t.id]} : t);
 }
 // тема по полу: «он» — тёмная с кислотно-зелёным акцентом
-function applyTheme(gender){
+function applyTheme(gender, look){
   const m = gender === 'm', root = document.documentElement;
   if (m) root.dataset.g = 'm'; else delete root.dataset.g;
-  document.querySelectorAll('meta[name="theme-color"]').forEach((el, i) => el.setAttribute('content', m ? '#07090a' : (i === 0 ? '#f4f1f7' : '#0b0a10')));
+  lookVars(look !== undefined ? look : data.settings && data.settings.look);
+  // цвет строки состояния — как фон
+  const mode = root.dataset.mode, base = mode ? getComputedStyle(root).getPropertyValue('--base').trim() : null;
+  document.querySelectorAll('meta[name="theme-color"]').forEach((el, i) => el.setAttribute('content', base || (m ? '#07090a' : (i === 0 ? '#f4f1f7' : '#0b0a10'))));
+}
+// Меню → Оформление: фон (авто/светлый/тёмный/чёрный) и до трёх цветов из 15, как в Telegram. Видно сразу, сохраняется «Готово».
+function lookSheet(){
+  const cur = data.settings.look || {mode:'auto', c:[]};
+  const st = lookSheet.st = {mode: cur.mode || 'auto', c: [...(cur.c || [])]};
+  const draw = () => {
+    applyTheme(data.profile && data.profile.gender, st);
+    $('#lookSw').innerHTML = LOOK_COLORS.map(([h, sat, name], i) => { const n = st.c.indexOf(i);
+      return `<button class="swatch ${n >= 0 ? 'on' : ''}" data-i="${i}" aria-label="${name}${n >= 0 ? ', выбран' : ''}" style="background:hsl(${h} ${sat}% ${sat ? 58 : 45}%)">${n >= 0 ? `<b>${n + 1}</b>` : ''}</button>`; }).join('');
+  };
+  const modes = [['auto','Авто'],['light','Светлый'],['dark','Тёмный'],['black','Чёрный']];
+  openSheet(`${head('Оформление')}
+    <div class="section-title" style="margin:0 6px 8px;font-size:17px">Фон</div>
+    <div class="seg" style="margin-bottom:18px">${modes.map(([k, l]) => `<label><input type="radio" name="look-mode" value="${k}" ${st.mode === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
+    <div class="section-title" style="margin:0 6px 4px;font-size:17px">Цвета</div>
+    <p class="hint" style="margin:0 6px 10px">Выбери от одного до трёх — из них соберётся фон. Ничего не выбрано — цвета темы.</p>
+    <div class="swatches card glass" id="lookSw"></div>
+    <div class="actions"><button class="btn primary" data-act="look-save">Готово</button><button class="btn tinted" data-act="look-reset">Как было</button></div>`);
+  $('#lookSw').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-i]'); if (!b) return; ev.stopPropagation();
+    const i = +b.dataset.i, n = st.c.indexOf(i);
+    if (n >= 0) st.c.splice(n, 1); else if (st.c.length >= 3){ toast('Не больше трёх — сними один из выбранных'); return; } else st.c.push(i);
+    draw();
+  });
+  document.querySelectorAll('input[name="look-mode"]').forEach(r => r.addEventListener('change', () => { st.mode = r.value; draw(); }));
+  draw();
 }
 function phrase(i){
   const list = data.profile && data.profile.gender === 'm' ? prof().phrasesM : prof().phrasesF;
@@ -2185,6 +2253,7 @@ function settingsSheet(){
     <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:22px">
       ${menu('open-history', ICONS.trophy, 'var(--orange)', 'История и итоги', 'Доход по месяцам, картинка для сторис')}
       ${menu('profile', ICONS.client, 'var(--pink)', 'Профиль', [p.name, p.profession === 'custom' ? p.profName : '', p.city && p.city.name].filter(Boolean).join(' · ') || 'Имя и город')}
+      ${menu('look', ICONS.spark, 'var(--indigo)', 'Оформление', 'Фон и цвета — под себя')}
       ${menu('cal-import', ICONS.cal, 'var(--red)', 'Перенести из календаря', 'Google, Apple или Яндекс')}
       ${menu('pkgs', ICONS.expense, 'var(--orange)', 'Прайс-лист', data.packages.length ? data.packages.length + ' ' + plural(data.packages.length,'услуга','услуги','услуг') : 'Цены подставляются в записи')}
       ${menu('templates', ICONS.chat, 'var(--teal)', 'Шаблоны сообщений', data.templates.length + ' ' + plural(data.templates.length,'шаблон','шаблона','шаблонов'))}
@@ -2979,6 +3048,9 @@ document.addEventListener('click', ev => {
     }
     case 'goal': swapSheet(goalForm); break;
     case 'settings': settingsSheet(); break;
+    case 'look': swapSheet(() => lookSheet()); break;
+    case 'look-save': { const st = lookSheet.st; data.settings = {...data.settings, look: {mode: st.mode, c: st.c}}; data.settingsU = Date.now(); persist(); closeSheet(); toast('Оформление сохранено'); break; }
+    case 'look-reset': { const st = lookSheet.st; st.mode = 'auto'; st.c = []; data.settings = {...data.settings, look: {mode:'auto', c:[]}}; data.settingsU = Date.now(); persist(); closeSheet(); toast('Вернули как было'); break; }
     case 'open-history': closeSheet(); ui.tab = 'history'; render(); scrollTo({top:0}); break;
     case 'profile': swapSheet(profileSheet); break;
     case 'recap': swapSheet(() => recapSheet(el.dataset.m)); break;
