@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Кадр</title>
+<title>Фикус</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Кадр">
+<meta name="apple-mobile-web-app-title" content="Фикус">
 <meta name="theme-color" content="#f4f1f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b0a10" media="(prefers-color-scheme: dark)">
 <meta name="format-detection" content="telephone=no">
@@ -324,7 +324,7 @@ a{color:inherit;text-decoration:none}
 .onb-body .form,.onb-body .seg{margin:0}
 .onb-body .field input{text-align:left}
 .onb .lens.big{width:84px;height:84px;border-radius:50%;border:7px solid var(--accent);display:grid;place-items:center;margin:6px auto 4px;animation:focus 1.4s cubic-bezier(.3,1.4,.5,1) both}
-.onb .lens.big i{width:26px;height:26px;border-radius:50%;background:var(--accent)}
+.onb .lens.big svg{width:40px;height:40px;color:var(--accent)}
 .onb-dots{display:flex;gap:6px;justify-content:center}
 .onb-dots i{width:7px;height:7px;border-radius:50%;background:var(--fg3);transition:all .3s}
 .onb-dots i.on{width:22px;border-radius:4px;background:var(--accent)}
@@ -398,7 +398,7 @@ a{color:inherit;text-decoration:none}
 .splash.hide{opacity:0;transform:scale(1.04);pointer-events:none}
 .splash .lens{width:84px;height:84px;border-radius:50%;border:7px solid rgba(255,255,255,.95);display:grid;place-items:center;margin-bottom:34px;
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);background:rgba(255,255,255,.14);animation:focus 1.6s cubic-bezier(.3,1.4,.5,1) both}
-.splash .lens i{width:26px;height:26px;border-radius:50%;background:#fff}
+.splash .lens svg{width:40px;height:40px;color:#fff}
 .splash p{font:700 clamp(30px,8.5vw,44px)/1.12 var(--display);letter-spacing:-.02em;margin:0;max-width:14ch;text-wrap:balance;animation:rise .9s .25s ease both}
 .splash small{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 34px);font-size:14px;opacity:.7;animation:rise .9s .7s ease both}
 @keyframes focus{from{transform:scale(1.6);opacity:0;filter:blur(8px)}to{transform:none;opacity:1;filter:none}}
@@ -432,9 +432,9 @@ a{color:inherit;text-decoration:none}
 <div class="bg" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <div class="splash" id="splash" role="button" tabindex="0" aria-label="Открыть приложение">
-  <div class="lens"><i></i></div>
+  <div class="lens"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 18.5C5.5 10.5 10.5 5.5 18.5 5.5c0 8-5 13-13 13z" fill="currentColor"/><path d="M6.5 17.5l8-8" stroke="rgba(0,0,0,.18)" stroke-width="1.4" stroke-linecap="round"/></svg></div>
   <p id="splashText">Ты всё сможешь</p>
-  <small id="splashSign">Кадр</small>
+  <small id="splashSign">Фикус</small>
 </div>
 
 <main class="app" id="app"></main>
@@ -470,7 +470,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Кадр', tagline:'планер для фотографов', version:'0.9', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.0', tg:'gog_sonn'};
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
@@ -1702,7 +1702,7 @@ async function enablePush(btn){
   btn.disabled = true; btn.textContent = 'Включаю…';
   try {
     const perm = await Notification.requestPermission();
-    if (perm !== 'granted'){ toast('Уведомления запрещены. Разреши их в Настройках iPhone → Уведомления → Кадр'); return; }
+    if (perm !== 'granted'){ toast('Уведомления запрещены. Разреши их в Настройках iPhone → Уведомления → Фикус'); return; }
     const reg = await navigator.serviceWorker.ready;
     const {publicKey} = await fetch(PUSH_FN + '?vapid').then(r => r.json());
     let sub = await reg.pushManager.getSubscription();
@@ -1733,7 +1733,7 @@ async function refreshCloudUi(){
   const st = await pushState();
   pb.innerHTML = st === 'on'
     ? `<div class="btn-row"><button class="btn tinted" data-act="push-test">Проверить</button><button class="btn tinted" data-act="push-on">Обновить</button></div><p class="hint" style="margin:10px 6px 0">Уведомления на этом телефоне включены ✓</p>`
-    : st === 'denied' ? `<p class="hint" style="margin:0 6px">Уведомления запрещены. Разреши их: Настройки iPhone → Уведомления → Кадр.</p>`
+    : st === 'denied' ? `<p class="hint" style="margin:0 6px">Уведомления запрещены. Разреши их: Настройки iPhone → Уведомления → Фикус.</p>`
     : st === 'unsupported' ? `<p class="hint" style="margin:0 6px">${/iPhone|iPad/.test(navigator.userAgent) && !isStandalone() ? 'Чтобы получать напоминания, добавь приложение на экран «Домой» (нужен iOS 16.4 или новее) и открой его оттуда.' : 'Этот браузер не поддерживает уведомления.'}</p>`
     : `<button class="btn primary" data-act="push-on">🔔 Включить уведомления</button>`;
 }
@@ -1947,7 +1947,10 @@ function drawRecap(st, showMoney){
   // подпись приложения — нативная реклама
   const ly = H - 125;
   x.beginPath(); x.arc(150, ly, 52, 0, Math.PI*2); x.fillStyle = 'rgba(255,255,255,.15)'; x.fill(); x.strokeStyle = male ? P.badge : '#fff'; x.lineWidth = 11; x.stroke();
-  x.beginPath(); x.arc(150, ly, 18, 0, Math.PI*2); x.fillStyle = male ? P.badge : '#fff'; x.fill(); x.fillStyle = '#fff';
+  // лист фикуса внутри кружка — знак приложения
+  x.save(); x.translate(150, ly); x.fillStyle = male ? P.badge : '#fff';
+  x.beginPath(); x.moveTo(-20, 20); x.bezierCurveTo(-20, -5, -5, -20, 20, -20); x.bezierCurveTo(20, 5, 5, 20, -20, 20); x.fill();
+  x.restore(); x.fillStyle = '#fff';
   x.font = `800 64px ${F}`; x.fillText(APP.name, 236, ly + 8);
   x.globalAlpha = .75; x.font = `500 36px ${F}`; x.fillText(APP.tagline, 238, ly + 58); x.globalAlpha = 1;
   return cv;
@@ -2143,7 +2146,7 @@ function onboarding(){
   const draw = () => {
     let body = '', btn = 'Дальше', skip = '';
     if (st.step === 0){
-      body = `<div class="lens big"><i></i></div><h2>Привет! Это ${APP.name}</h2><p>Календарь, клиенты и деньги — в одном красивом месте.</p>`;
+      body = `<div class="lens big"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 18.5C5.5 10.5 10.5 5.5 18.5 5.5c0 8-5 13-13 13z" fill="currentColor"/><path d="M6.5 17.5l8-8" stroke="rgba(0,0,0,.18)" stroke-width="1.4" stroke-linecap="round"/></svg></div><h2>Привет! Это ${APP.name}</h2><p>Календарь, клиенты и деньги — в одном красивом месте.</p>`;
       btn = 'Начать';
     } else if (st.step === 1){
       body = `<h2>Как тебя зовут?</h2><p>Буду обращаться по имени.</p>
@@ -2407,11 +2410,11 @@ function feedbackSheet(){
 /* ---------- копия данных ---------- */
 async function exportData(){
   const json = JSON.stringify({app:'kadr', version:2, exportedAt:new Date().toISOString(), entries:data.entries, expenses:data.expenses, clients:data.clients, subs:data.subs, goal:data.goal, ach:data.ach}, null, 2);
-  const name = `Кадр-копия-${today()}.json`;
+  const name = `Фикус-копия-${today()}.json`;
   const file = new File([json], name, {type:'application/json'});
   const done = () => { data.lastBackup = Date.now(); persist(); toast('Копия сохранена'); closeSheet(); };
   try {
-    if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Копия данных «Кадр»'}); done(); return; }
+    if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Копия данных «Фикус»'}); done(); return; }
   } catch(e){ if (e.name === 'AbortError') return; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
@@ -2429,7 +2432,7 @@ $('#importFile').addEventListener('change', async ev => {
       data = normalize(d); data.lastBackup = Date.now();
       persist(); checkAch({silent:true}); closeSheet(); render(); toast('Данные восстановлены');
     };
-  } catch(e){ toast('Это не похоже на копию «Кадра»'); }
+  } catch(e){ toast('Это не похоже на копию «Фикуса»'); }
 });
 
 /* ---------- события ---------- */

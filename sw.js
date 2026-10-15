@@ -1,5 +1,5 @@
 // Офлайн-режим: сначала сеть (чтобы обновления приходили сами), без сети — из кэша.
-const CACHE = 'kadr-v13';
+const CACHE = 'kadr-v14';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -29,7 +29,7 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data && e.data.text() }; }
-  e.waitUntil(self.registration.showNotification(d.title || 'Кадр', {
+  e.waitUntil(self.registration.showNotification(d.title || 'Фикус', {
     body: d.body || '',
     tag: d.tag,
     icon: 'icon-192.png',
