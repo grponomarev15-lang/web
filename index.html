@@ -512,7 +512,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.2', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.3', tg:'gog_sonn'};
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
@@ -1009,6 +1009,7 @@ function entryRow(e, opts = {}){
   else if (e.type === 'retouch') bits.push(e.time ? 'сдать до ' + e.time : 'срок сдачи');
   if (e.time && e.type !== 'retouch') bits.push(e.time);
   if (e.type === 'lesson') bits.push(e.format === 'call' ? 'созвон' : 'встреча');
+  if (isRepeat(e)) bits.push('🔁 ' + repeatLabel(e));
   const cn = opts.noClient ? '' : clientName(e);
   if (cn) bits.push(cn);
   if (!bits.length) bits.push(t.one);
@@ -1019,8 +1020,8 @@ function entryRow(e, opts = {}){
   else { const p = payState(e); if (p) pill = `<button class="pill ${p.cls}" data-act="paid" data-id="${e.id}">${p.text}</button>`; }
   const pr = PRIO[e.prio];
   const done = checkable(e)
-    ? `<button class="check ${e.done?'on':''}" data-act="done" data-id="${e.id}" aria-label="${e.done?'Сделано':'Отметить сделанным'}">${ICONS.tick}</button>` : '';
-  return `<div class="row ${isPast && !opts.showDate ? 'past':''} ${checkable(e)&&e.done?'doneRow':''}" ${pr ? `style="--pc:${pr.color}"` : ''} data-act="edit" data-id="${e.id}" role="button" tabindex="0">
+    ? `<button class="check ${e.done?'on':''}" data-act="done" data-id="${e.id}"${occAttr(e)} aria-label="${e.done?'Сделано':'Отметить сделанным'}">${ICONS.tick}</button>` : '';
+  return `<div class="row ${isPast && !opts.showDate ? 'past':''} ${checkable(e)&&e.done?'doneRow':''}" ${pr ? `style="--pc:${pr.color}"` : ''} data-act="edit" data-id="${e.id}"${occAttr(e)} role="button" tabindex="0">
     ${done || `<span class="ic" style="--c:${t.color}">${iconFor(e)}</span>`}
     <div class="rt"><div class="t1">${pr && !opts.inPrio ? `<span class="prio-e">${pr.emoji}</span>` : ''}${done && e.emoji ? esc(e.emoji) + ' ' : ''}${esc(e.title || t.one)}</div><div class="t2">${esc(bits.join(' · '))}</div></div>
     <div class="rr">${opts.extraPill || ''}${amount ? `<div class="amt">${rub(amount)}</div>` : ''}${pill}</div>
@@ -1034,9 +1035,43 @@ const toMin = t => { const [h,m] = t.split(':').map(Number); return h*60 + m; };
 const hhmm = m => pad(Math.floor(m/60) % 24) + ':' + pad(m % 60);
 const DURS = [[30,'30 мин'],[60,'1 час'],[90,'1,5 часа'],[120,'2 часа'],[180,'3 часа'],[240,'4 часа'],[360,'6 часов'],[480,'8 часов'],[720,'12 часов']];
 const durOf = e => +e.dur || 60;
+// ---------- повторяющиеся дела ----------
+// e.repeat = {f:'daily'|'weekdays'|'weekly'|'monthly', until:'YYYY-MM-DD'|''}; e.date — первый день.
+// У каждого повтора своя галочка (e.doneOn[дата]) и свои удаления/переносы (e.skip = [даты]).
+const REPEATS = [['', 'Не повторять'], ['daily', 'Каждый день'], ['weekdays', 'По будням'], ['weekly', 'Каждую неделю'], ['monthly', 'Каждый месяц']];
+const isRepeat = e => !!(e && e.repeat && e.repeat.f);
+function occursOn(e, ds){
+  if (!isRepeat(e)) return ds === e.date;
+  const r = e.repeat;
+  if (ds < e.date || (r.until && ds > r.until) || (e.skip || []).includes(ds)) return false;
+  const d = parseD(ds), s0 = parseD(e.date);
+  if (r.f === 'daily') return true;
+  if (r.f === 'weekdays') return d.getDay() >= 1 && d.getDay() <= 5;
+  if (r.f === 'weekly') return d.getDay() === s0.getDay();
+  if (r.f === 'monthly') return d.getDate() === s0.getDate();
+  return false;
+}
+// повтор как отдельная запись на конкретный день (id тот же, occ — его дата)
+const occOf = (e, ds) => ({...e, date: ds, occ: ds, done: !!(e.doneOn && e.doneOn[ds])});
+// все записи в интервале дат, с развёрнутыми повторами
+function expandEntries(from, to){
+  const out = [];
+  for (const e of data.entries){
+    if (!e.date) continue;
+    if (!isRepeat(e)){ if (e.date >= from && e.date <= to) out.push(e); continue; }
+    const end = e.repeat.until && e.repeat.until < to ? e.repeat.until : to;
+    let ds = e.date > from ? e.date : from, guard = 0;
+    while (ds <= end && guard++ < 900){ if (occursOn(e, ds)) out.push(occOf(e, ds)); ds = shiftDay(ds, 1); }
+  }
+  return out;
+}
+const occAttr = e => e && e.occ ? ` data-occ="${e.occ}"` : '';
+const repeatLabel = e => isRepeat(e) ? (REPEATS.find(r => r[0] === e.repeat.f) || ['',''])[1].toLowerCase() : '';
 function byDate(){
   const m = {};
-  for (const e of data.entries) if (e.date) (m[e.date] ||= []).push(e);
+  // окно вокруг выбранного дня — в нём разворачиваем повторы
+  const base = ui.selDate || today();
+  for (const e of expandEntries(shiftDay(base, -400), shiftDay(base, 400))) (m[e.date] ||= []).push(e);
   for (const k in m) m[k].sort((a,b) => (a.time||'').localeCompare(b.time||''));
   return m;
 }
@@ -1073,7 +1108,7 @@ function prioList(list, opts = {}){
 function evChip(e){
   const t = TYPES[e.type] || TYPES.other, pr = PRIO[e.prio];
   const lead = e.type === 'retouch' ? (e.done ? 'Сдано' : 'Сдать') + (e.time ? ' до ' + e.time : '') + ': ' : e.time ? e.time + ' ' : '';
-  return `<button class="chipev ${checkable(e)&&e.done?'done':''}" style="--c:${t.color}" data-act="edit" data-id="${e.id}">${pr ? pr.emoji + ' ' : ''}${e.emoji ? esc(e.emoji) + ' ' : ''}${esc(lead)}${esc(e.title || t.one)}${clientName(e) ? `<span> · ${esc(clientName(e))}</span>` : ''}</button>`;
+  return `<button class="chipev ${checkable(e)&&e.done?'done':''}" style="--c:${t.color}" data-act="edit" data-id="${e.id}"${occAttr(e)}>${pr ? pr.emoji + ' ' : ''}${e.emoji ? esc(e.emoji) + ' ' : ''}${esc(lead)}${esc(e.title || t.one)}${clientName(e) ? `<span> · ${esc(clientName(e))}</span>` : ''}</button>`;
 }
 
 /* --- вкладка «Главная»: сегодня, не закрыто, ближайшее, цель, долги --- */
@@ -1081,7 +1116,8 @@ const nowMin = () => { const n = new Date(); return n.getHours() * 60 + n.getMin
 // дела и дедлайны, которые прошли, а галочку не поставили
 function overdueList(){
   const t = today(), m = nowMin();
-  return data.entries.filter(e => checkable(e) && !e.done && e.date && (e.date < t ||
+  return expandEntries(shiftDay(t, -365), t).filter(e => checkable(e) && !e.done && (
+      (!e.occ && e.date < t) ||
       (e.date === t && e.time && toMin(e.time) + (e.type === 'task' ? durOf(e) : 0) <= m)))
     .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
 }
@@ -1095,7 +1131,7 @@ function renderHome(){
   const od = overdueList();
   if (od.length){
     h += `<div class="section-title">Не закрыто · ${od.length}</div><div class="section-note">Отметь сделанным или перенеси на другой день.</div>`;
-    h += `<div class="list glass">${od.map(e => entryRow(e, {showDate:true, extraPill:`<button class="pill late" data-act="resched" data-id="${e.id}">Перенести</button>`})).join('')}</div>`;
+    h += `<div class="list glass">${od.map(e => entryRow(e, {showDate:true, extraPill:`<button class="pill late" data-act="resched" data-id="${e.id}"${occAttr(e)}>Перенести</button>`})).join('')}</div>`;
   }
 
   // цель месяца и долги — две плитки
@@ -1109,14 +1145,16 @@ function renderHome(){
   </div>`;
 
   // сегодня
-  const todayList = (byDate()[t] || []).filter(e => !od.includes(e));
+  const todayList = (byDate()[t] || []).filter(e => !od.some(o => o.id === e.id && o.date === e.date));
   h += `<div class="section-title">Сегодня</div>`;
   h += todayList.length ? prioList(todayList)
     : `<button class="card glass empty" data-act="new-on" data-d="${t}" style="padding:18px;width:100%"><b style="font-size:16px">Сегодня свободно</b><p>Нажми, чтобы что-то запланировать</p></button>`;
 
   // ближайшее — следующие 5 записей после сегодня
-  const next = data.entries.filter(e => e.date > t && !(checkable(e) && e.done))
-    .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || ''))).slice(0, 5);
+  const seen = new Set();
+  const next = expandEntries(shiftDay(t, 1), shiftDay(t, 120)).filter(e => !(checkable(e) && e.done))
+    .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))
+    .filter(e => !seen.has(e.id) && seen.add(e.id)).slice(0, 5);
   if (next.length) h += `<div class="section-title">Ближайшее</div><div class="list glass">${next.map(e => entryRow(e, {showDate:true})).join('')}</div>`;
   return h + `</div>`;
 }
@@ -1129,16 +1167,21 @@ function reschedSheet(e){
   ];
   openSheet(`${head('Перенести')}
     <p class="hint" style="margin:0 6px 12px">«${esc(e.title || TYPES[e.type].one)}» — ${shortDate(e.date)}${e.time ? ' в ' + e.time : ''}. Куда переставить?</p>
-    <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:14px">${opts.map(([l, d, tt]) => `<button class="row" data-act="resched-to" data-id="${e.id}" data-d="${d}" data-t="${tt}" style="min-height:52px">
+    <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:14px">${opts.map(([l, d, tt]) => `<button class="row" data-act="resched-to" data-id="${e.id}"${occAttr(e)} data-d="${d}" data-t="${tt}" style="min-height:52px">
       <div class="rt"><div class="t1">${l}</div><div class="t2">${dayLabel(d)}${tt ? ' · ' + tt : ''}</div></div><span class="chev">${ICONS.right}</span></button>`).join('')}</div>
     <form id="reschedForm" class="form"><div class="field"><label for="rs-d">Дата</label><input type="date" id="rs-d" value="${shiftDay(t, 1)}"></div>
       <div class="field"><label for="rs-t">Время</label><input type="time" id="rs-t" value="${esc(tm)}"></div></form>
-    <div class="actions"><button class="btn primary" data-act="resched-custom" data-id="${e.id}">Перенести на эту дату</button>
-      <button class="btn tinted" data-act="done" data-id="${e.id}">${ICONS.tick}Нет, уже сделано</button></div>`);
+    <div class="actions"><button class="btn primary" data-act="resched-custom" data-id="${e.id}"${occAttr(e)}>Перенести на эту дату</button>
+      <button class="btn tinted" data-act="done" data-id="${e.id}"${occAttr(e)}>${ICONS.tick}Нет, уже сделано</button></div>`);
 }
-function moveEntry(id, d, tm){
+function moveEntry(id, d, tm, occ){
   const e = data.entries.find(x => x.id === id); if (!e) return;
-  e.date = d; if (tm !== undefined) e.time = tm; touch(e); persist();
+  if (occ && isRepeat(e)){
+    e.skip = [...(e.skip || []), occ]; touch(e);
+    const copy = {...e, id: uid(), date: d, time: tm !== undefined ? tm : e.time, repeat: undefined, doneOn: undefined, skip: undefined, done: false, created: Date.now()};
+    data.entries.push(touch(copy));
+  } else { e.date = d; if (tm !== undefined) e.time = tm; touch(e); }
+  persist();
   ui.selDate = d; ui.month = d.slice(0, 7);
   closeSheet(); render(); toast(`Перенесено на ${dayLabel(d).toLowerCase()}${tm ? ' в ' + tm : ''}`);
 }
@@ -1154,7 +1197,7 @@ function overdueSheet(){
   const od = overdueList();
   openSheet(`${head(od.length === 1 ? 'Не закрыто' : 'Не закрыто · ' + od.length)}
     <p class="hint" style="margin:0 6px 12px">${od.length === 1 ? g('Ты не отметил[а|] это сделанным. Перенести на другой день?') : g('Ты не отметил[а|] их сделанными. Нажми на «Перенести» или поставь галочку.')}</p>
-    <div class="list" id="odList" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:12px">${od.map(e => entryRow(e, {showDate:true, extraPill:`<button class="pill late" data-act="resched" data-id="${e.id}">Перенести</button>`})).join('')}</div>
+    <div class="list" id="odList" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:12px">${od.map(e => entryRow(e, {showDate:true, extraPill:`<button class="pill late" data-act="resched" data-id="${e.id}"${occAttr(e)}>Перенести</button>`})).join('')}</div>
     <button class="btn tinted" data-act="close">Позже</button>`);
 }
 
@@ -1604,6 +1647,7 @@ function defaultDate(){
 
 function entryForm(e, preset = {}){
   const isNew = !e;
+  const occ = !isNew && isRepeat(e) ? preset.occ : null;
   e = e || {type: preset.type || 'shoot', title: preset.title || '', emoji: preset.emoji || '', date: preset.date || defaultDate(), time: preset.time || '', format:'meet', paid:false, clientId: preset.clientId || ''};
   const cn = e.clientId ? (clientById(e.clientId) || {}).name || '' : e.client || '';
   const seg = visTypes().map(k => [k, TYPES[k]]).map(([k,t]) => `<label><input type="radio" name="f-type" value="${k}" ${e.type===k?'checked':''}><span>${t.one}</span></label>`).join('');
@@ -1631,6 +1675,11 @@ function entryForm(e, preset = {}){
         <div class="field" id="timeField"><label for="f-time" id="l-time">${e.type==='retouch'?'Сдать к':'Время'}</label><input type="time" id="f-time" name="time" value="${esc(e.time||'')}"></div>
         <div class="field" id="durField" ${e.type==='retouch'?'hidden':''}><label for="f-dur">Длительность</label><select id="f-dur" name="dur">${DURS.map(([v,l]) => `<option value="${v}" ${durOf(e)===v?'selected':''}>${l}</option>`).join('')}</select></div>
       </div>
+      <div class="form" id="repeatBox" ${e.type === 'task' ? '' : 'hidden'}>
+        <div class="field"><label for="f-rep">Повтор</label><select id="f-rep" name="repeat">${REPEATS.map(([v,l]) => `<option value="${v}" ${(e.repeat && e.repeat.f || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="field" id="untilField" ${isRepeat(e) ? '' : 'hidden'}><label for="f-until">До</label><input type="date" id="f-until" name="until" value="${esc(e.repeat && e.repeat.until || '')}"></div>
+      </div>
+      ${occ ? `<p class="hint" style="margin:-6px 6px 14px">🔁 Это повторяющееся дело. Изменения применятся ко всем повторам; дата выше — день начала.</p>` : ''}
       <div class="form">
         <div class="field"><label style="width:auto;margin-right:auto">Приоритет</label>
           <div class="seg prio-seg" style="margin:0;flex:none;width:190px" role="radiogroup" aria-label="Приоритет">${[[0,'—'],[1,'😴'],[2,'⚡'],[3,'🔥']].map(([v,l]) => `<label><input type="radio" name="prio" value="${v}" ${(e.prio||0)===v?'checked':''}><span>${l}</span></label>`).join('')}</div></div>
@@ -1650,11 +1699,16 @@ function entryForm(e, preset = {}){
       <div class="form"><div class="field col"><label for="f-note">Заметка</label><textarea id="f-note" name="note" rows="2" placeholder="${e.type==='task'?'С кем, что взять с собой…':'Локация, образы, пожелания…'}">${esc(e.note||'')}</textarea></div></div>
       <div class="actions">
         <button type="submit" class="btn primary">${isNew ? 'Добавить' : 'Сохранить'}</button>
-        ${isNew ? '' : `<button type="button" class="btn danger" data-act="del-entry" data-id="${e.id}">Удалить</button>`}
+        ${isNew ? '' : occ ? `<button type="button" class="btn danger" data-act="del-occ" data-id="${e.id}" data-occ="${occ}">Удалить только ${dayLabel(occ).toLowerCase()}</button>
+        <button type="button" class="btn danger" data-act="del-entry" data-id="${e.id}">Удалить все повторы</button>`
+        : `<button type="button" class="btn danger" data-act="del-entry" data-id="${e.id}">Удалить</button>`}
       </div>
     </form>`);
   const form = $('#entryForm');
   const curType = () => form.querySelector('input[name="f-type"]:checked').value;
+  // повтор: показываем «До», а галочку «Сделано» у серии прячем — она ставится у каждого дня в списке
+  const syncRepeat = () => { const r = !!$('#f-rep').value && curType() === 'task'; $('#untilField').hidden = !r; if (r) $('#doneBox').hidden = true; };
+  $('#f-rep').addEventListener('change', syncRepeat); syncRepeat();
   $('#iconPick').addEventListener('click', () => { $('#emojiGrid').hidden = !$('#emojiGrid').hidden; });
   $('#emojiGrid').addEventListener('click', ev => {
     const b = ev.target.closest('[data-emo]'); if (!b) return;
@@ -1709,7 +1763,9 @@ function entryForm(e, preset = {}){
     $('#formatSeg').hidden = t !== 'lesson';
     $('#l-time').textContent = t === 'retouch' ? 'Сдать к' : 'Время';
     $('#durField').hidden = t === 'retouch';
+    $('#repeatBox').hidden = t !== 'task';
     $('#doneBox').hidden = !(t === 'retouch' || t === 'task');
+    syncRepeat();
     $('#l-done').textContent = t === 'task' ? 'Сделано' : prof().post.done;
     if (!$('#f-emoji').value) $('#iconCur').innerHTML = iconFor({type:t, format:'meet'});
     $('#l-date').textContent = t === 'retouch' ? 'Сдать до' : 'Дата';
@@ -1739,12 +1795,16 @@ function entryForm(e, preset = {}){
       format: type === 'lesson' ? fd.get('f-format') : undefined,
       subId: subId || undefined,
       amount, prepaid, paid: !!fd.get('paid') || (amount > 0 && prepaid >= amount),
-      done: type === 'retouch' || type === 'task' ? !!fd.get('done') : undefined,
+      done: type === 'retouch' || (type === 'task' && !fd.get('repeat')) ? !!fd.get('done') : undefined,
+      repeat: type === 'task' && fd.get('repeat') ? {f: fd.get('repeat'), until: fd.get('until') || ''} : undefined,
+      doneOn: type === 'task' && fd.get('repeat') ? e.doneOn : undefined,
+      skip: type === 'task' && fd.get('repeat') ? e.skip : undefined,
       note: fd.get('note').trim(), created: e.created || Date.now(), u: Date.now()
     };
     if (isNew) data.entries.push(rec); else data.entries[data.entries.findIndex(x => x.id === e.id)] = rec;
     persist();
-    ui.month = rec.date.slice(0,7); ui.selDate = rec.date;
+    const back = occ && isRepeat(rec) ? occ : rec.date; // правили повтор — остаёмся на его дне
+    ui.month = back.slice(0,7); ui.selDate = back;
     closeSheet(); render();
     const sub = subId && subById(subId);
     toast(isNew ? cheer(rec, sub) : 'Сохранено');
@@ -2782,7 +2842,7 @@ document.addEventListener('click', ev => {
     case 'new-client': swapSheet(() => clientForm(null)); break;
     case 'new-sub': swapSheet(() => subForm(null, id || '')); break;
     case 'add-exp': swapSheet(() => expenseForm(null)); break;
-    case 'edit': swapSheet(() => entryForm(data.entries.find(e => e.id === id))); break;
+    case 'edit': swapSheet(() => entryForm(data.entries.find(e => e.id === id), {occ: el.dataset.occ})); break;
     case 'edit-exp': expenseForm(data.expenses.find(x => x.id === id)); break;
     case 'edit-sub': swapSheet(() => subForm(subById(id))); break;
     case 'client': swapSheet(() => clientSheet(id)); break;
@@ -2797,7 +2857,13 @@ document.addEventListener('click', ev => {
       break;
     }
     case 'done': {
-      const e = data.entries.find(x => x.id === id); e.done = !e.done; touch(e); persist();
+      const e0 = data.entries.find(x => x.id === id); if (!e0) break;
+      // у повтора своя галочка на каждый день
+      const occ = el.dataset.occ;
+      if (occ && isRepeat(e0)){ e0.doneOn = {...(e0.doneOn || {})}; if (e0.doneOn[occ]) delete e0.doneOn[occ]; else e0.doneOn[occ] = true; }
+      else e0.done = !e0.done;
+      touch(e0); persist();
+      const e = occ && isRepeat(e0) ? occOf(e0, occ) : e0;
       // в окне «Не закрыто» — обновляем список; в окне переноса («уже сделано») — закрываем
       if ($('#odList')) { overdueList().length ? overdueSheet() : closeSheet(); }
       else if (sheetOpen() && !el.closest('.row')) closeSheet();
@@ -2808,9 +2874,14 @@ document.addEventListener('click', ev => {
       checkAch({retouchZero: zero});
       break;
     }
-    case 'resched': swapSheet(() => reschedSheet(data.entries.find(x => x.id === id))); break;
-    case 'resched-to': moveEntry(id, el.dataset.d, el.dataset.t); break;
-    case 'resched-custom': { const d = $('#rs-d').value; if (!d){ toast('Выбери дату'); break; } moveEntry(id, d, $('#rs-t').value); break; }
+    case 'resched': { const e = data.entries.find(x => x.id === id); swapSheet(() => reschedSheet(el.dataset.occ && isRepeat(e) ? occOf(e, el.dataset.occ) : e)); break; }
+    case 'resched-to': moveEntry(id, el.dataset.d, el.dataset.t, el.dataset.occ); break;
+    case 'resched-custom': { const d = $('#rs-d').value; if (!d){ toast('Выбери дату'); break; } moveEntry(id, d, $('#rs-t').value, el.dataset.occ); break; }
+    case 'del-occ': {
+      if (!armDelete(el)) break;
+      const e = data.entries.find(x => x.id === id); e.skip = [...(e.skip || []), el.dataset.occ]; touch(e);
+      persist(); closeSheet(); render(); toast('Удалено только ' + dayLabel(el.dataset.occ).toLowerCase()); break;
+    }
     case 'goal': swapSheet(goalForm); break;
     case 'settings': settingsSheet(); break;
     case 'open-history': closeSheet(); ui.tab = 'history'; render(); scrollTo({top:0}); break;
