@@ -1366,7 +1366,7 @@ function renderHome(){
   const wd = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'][d.getDay()];
   let h = `<div class="stack">` + installBanner() + recapBanner();
   // без входа всё живёт только в этом браузере — сменишь телефон или почистишь Safari, и записей не будет
-  if (!session && (data.entries.length || data.clients.length)) h += `<button class="card glass phrase" data-act="settings"><span class="spark" style="background:var(--grad-warm)">☁️</span>
+  if (!session && (data.entries.length || data.clients.length)) h += `<button class="card glass phrase" data-act="signup"><span class="spark" style="background:var(--grad-warm)">☁️</span>
     <p>Записи хранятся только на этом телефоне<small>Создай аккаунт или войди — так они не потеряются</small></p></button>`;
   h += `<div class="home-date">${wd}, ${d.getDate()} ${MONTHS_G[d.getMonth()]}</div>`;
 
@@ -3234,6 +3234,11 @@ document.addEventListener('click', ev => {
     }
     case 'goal': swapSheet(goalForm); break;
     case 'settings': settingsSheet(); break;
+    // баннер «только на этом телефоне» — сразу к регистрации в меню
+    case 'signup': settingsSheet.mode = 'up'; settingsSheet(); setTimeout(() => {
+      const f = $('#loginForm'); if (!f) return;
+      f.scrollIntoView({block:'center', behavior:'smooth'}); setTimeout(() => $('#l-email').focus({preventScroll:true}), 350);
+    }, 450); break;
     case 'look': swapSheet(() => lookSheet()); break;
     case 'look-save': { const st = lookSheet.st; data.settings = {...data.settings, look: {mode: st.mode, c: st.c}}; data.settingsU = Date.now(); persist(); closeSheet(); toast('Оформление сохранено'); break; }
     case 'look-reset': { const st = lookSheet.st; st.mode = 'auto'; st.c = []; data.settings = {...data.settings, look: {mode:'auto', c:[]}}; data.settingsU = Date.now(); persist(); closeSheet(); toast('Вернули как было'); break; }
