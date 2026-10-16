@@ -2481,7 +2481,7 @@ function tgAuth(kind){
     window.open(start.url, '_blank');
     openSheet(`${head(kind === 'link' ? 'Привязка Telegram' : 'Вход через Telegram')}
       <div style="text-align:center;padding:6px 6px 14px"><div style="width:64px;height:64px;margin:4px auto 12px;border-radius:50%;background:#2aabee;color:#fff;display:grid;place-items:center">${TG_ICON.replace('<svg', '<svg width="34" height="34"')}</div>
-      <p class="hint" style="margin:0 0 6px">1. Нажми «Открыть Telegram» — откроется наш бот.<br>2. Нажми там <b>«Start»</b> («Запустить»).<br>3. Вернись сюда — вход произойдёт сам.</p></div>
+      <p class="hint" style="margin:0 0 6px;text-align:left">1. Нажми синюю кнопку «Открыть Telegram» — откроется наш бот <b>@ficuss_bot</b>.<br>2. Внизу чата нажми <b>«Запустить»</b> (или «Start»).<br>3. Бот ответит «✅ Вход подтверждён» — возвращайся сюда, вход произойдёт сам.</p></div>
       <div class="actions"><a class="btn tgbtn" href="${start.url}" target="_blank" rel="noopener">${TG_ICON}Открыть Telegram</a><button class="btn tinted" data-act="close">Отмена</button></div>`);
     const t0 = Date.now(); let stop = false, busy = false;
     const sheet = $('#sheet');
@@ -2512,6 +2512,36 @@ async function tgLogin(onDone){
   if (onDone) onDone(r.isNew);
   else if (!data.profile) setTimeout(onboarding, 350);
   else { applyTheme(data.profile.gender); render(); }
+}
+// отдельное окно «Вход»: Telegram сверху, почта ниже. onDone(isNew) — что делать после входа (знакомство передаёт своё)
+function loginSheet(onDone){
+  openSheet(`${head('Вход')}
+    <p class="hint" style="margin:0 6px 12px">Быстрее всего — через Telegram: без пароля, вход подтверждаешь в нашем боте.</p>
+    ${tgBtn('tg-login-sheet', 'Войти через Telegram')}
+    <div class="or">или по почте</div>
+    <form id="lsForm" autocomplete="on">
+      <div class="form">
+        <div class="field"><label for="ls-email">Почта</label><input id="ls-email" type="email" inputmode="email" autocomplete="username" autocapitalize="off" placeholder="name@mail.ru" required></div>
+        <div class="field"><label for="ls-pass">Пароль</label><input id="ls-pass" type="password" autocomplete="current-password" placeholder="твой пароль" required></div>
+      </div>
+      <button class="btn primary" type="submit" id="lsBtn">Войти по почте</button>
+      <button type="button" class="linkbtn" style="margin:4px auto 0" data-act="forgot">Забыли пароль?</button>
+    </form>`);
+  loginSheet.done = onDone;
+  $('#lsForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const btn = $('#lsBtn'); btn.disabled = true; btn.textContent = 'Вхожу…';
+    try {
+      await logIn($('#ls-email').value.trim().toLowerCase(), $('#ls-pass').value);
+      await askLocalData(session.uid);
+      closeSheet(); sync.state = 'busy'; await syncNow();
+      toast('Ты в аккаунте ☁️');
+      if (onDone) onDone(false); else if (!data.profile) setTimeout(onboarding, 350); else { applyTheme(data.profile.gender); render(); }
+    } catch(e){
+      btn.disabled = false; btn.textContent = 'Войти по почте';
+      toast(AUTH_ERR[e && e.code] || (navigator.onLine === false ? 'Нет интернета' : 'Не получилось войти'));
+    }
+  });
 }
 async function tgLink(){
   let r; try { r = await tgAuth('link'); } catch(e){ return; }
@@ -3123,7 +3153,13 @@ function onboarding(){
     ev.stopPropagation();
     if (b.dataset.ob === 'cal'){ finish(b.dataset.s); return; }
     // уже есть аккаунт: входим, профиль и записи приходят из облака, знакомство не нужно
-    if (b.dataset.ob === 'login'){ el.classList.add('hide'); setTimeout(() => el.remove(), 500); settingsSheet.mode = 'in'; settingsSheet(); return; }
+    if (b.dataset.ob === 'login'){
+      loginSheet(() => {
+        if (data.profile){ el.classList.add('hide'); setTimeout(() => el.remove(), 500); applyTheme(data.profile.gender); render(); }
+        else { st.registered = true; st.step = 1; draw(); } // аккаунт есть, а профиля в облаке нет — знакомимся дальше
+      });
+      return;
+    }
     if (b.dataset.ob === 'prof'){ st.profession = b.dataset.p; draw(); return; }
     if (b.dataset.ob === 'skip'){ st.city = null; st.step++; draw(); return; }
     if (st.step === 1 && !st.name.trim()){ toast('Напиши, как тебя зовут'); return; }
@@ -3560,6 +3596,7 @@ document.addEventListener('click', ev => {
     case 'logout': if (!armDelete(el, 'Точно выйти?')) break; el.textContent = 'Сохраняю в облако…'; logOut(); break;
     case 'logout-force': logOut(true); break;
     case 'tg-login': tgLogin(); break;
+    case 'tg-login-sheet': tgLogin(loginSheet.done); break;
     case 'tg-link': tgLink(); break;
     case 'del-account': swapSheet(deleteAccountSheet); break;
     case 'privacy': window.open('privacy.html', '_blank'); break;
