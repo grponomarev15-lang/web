@@ -2519,7 +2519,7 @@ async function tgLogin(onDone, resume){
   toast(r.isNew ? 'Аккаунт создан ☁️ Данные будут в облаке' : 'Ты в аккаунте ☁️');
   const onb = document.querySelector('.onb');
   if (onDone) onDone(r.isNew);
-  else if (onb){ if (data.profile){ onb.classList.add('hide'); setTimeout(() => onb.remove(), 500); applyTheme(data.profile.gender); render(); } } // знакомство уже открыто — продолжится само
+  else if (onb){ if (data.profile){ onb.classList.add('hide'); setTimeout(() => onb.remove(), 500); applyTheme(data.profile.gender); render(); } else if (onboarding.redraw) onboarding.redraw(); } // знакомство уже открыто — продолжится само
   else if (!data.profile) setTimeout(onboarding, 350);
   else { applyTheme(data.profile.gender); render(); }
 }
@@ -3108,10 +3108,12 @@ function onboarding(){
   const dots = () => `<div class="onb-dots">${[0,1,2,3,4,5,6,7].map(i => `<i class="${i===st.step?'on':''}"></i>`).join('')}</div>`;
   const draw = () => {
     let body = '', btn = 'Дальше', skip = '';
+    if (session) st.registered = true; // уже вошли (через Telegram или почту) — аккаунт создавать не нужно
     if (st.step === 0){
       body = `<div class="lens big"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 18.5C5.5 10.5 10.5 5.5 18.5 5.5c0 8-5 13-13 13z" fill="currentColor"/><path d="M6.5 17.5l8-8" stroke="rgba(0,0,0,.18)" stroke-width="1.4" stroke-linecap="round"/></svg></div><h2>Привет! Это ${APP.name}</h2><p>Календарь, клиенты и деньги — в одном красивом месте.</p>`;
       btn = 'Начать';
-      skip = `<button class="onb-skip" data-ob="login">У меня уже есть аккаунт — войти</button>`;
+      skip = session ? `<p class="onb-skip" style="cursor:default">☁️ Ты в аккаунте ${esc(accountName())} ✓<br>Осталось познакомиться</p>`
+        : `<button class="onb-skip" data-ob="login">У меня уже есть аккаунт — войти</button>`;
     } else if (st.step === 1){
       body = `<h2>Как тебя зовут?</h2><p>Буду обращаться по имени.</p>
         <div class="form"><div class="field"><input id="ob-name" value="${esc(st.name)}" placeholder="Имя" autocomplete="off" style="text-align:left"></div></div>
@@ -3135,7 +3137,7 @@ function onboarding(){
       skip = `<button class="onb-skip" data-ob="skip">Пропустить</button>`;
     } else if (st.step === 6){
       body = st.registered
-        ? `<h2>Аккаунт создан ☁️</h2><p>Записи будут храниться в облаке и не потеряются, даже если сменишь телефон.</p>`
+        ? `<h2>Аккаунт подключён ☁️</h2><p>${session ? esc(accountName()) + '. ' : ''}Записи будут храниться в облаке и не потеряются, даже если сменишь телефон.</p>`
         : `<h2>Создай аккаунт</h2><p>Записи будут храниться в облаке — не потеряются, даже если сменишь телефон. И будут приходить напоминания.</p>
         <button type="button" class="btn tgbtn" data-ob="tg" style="width:100%">${TG_ICON}Через Telegram — без пароля</button>
         <div class="or">или по почте</div>
@@ -3153,6 +3155,7 @@ function onboarding(){
     el.innerHTML = `<div class="onb-card glass">${dots()}<div class="onb-body">${body}</div><button class="btn primary" data-ob="next">${btn}</button>${skip}</div>`;
     if (st.step === 1){ const n = el.querySelector('#ob-name'); setTimeout(() => n.focus(), 50); n.addEventListener('input', () => { st.name = n.value; }); el.querySelectorAll('input[name="ob-g"]').forEach(r => r.addEventListener('change', () => { st.gender = r.value; applyTheme(r.value); })); }
     if (st.step === 3) bindLookPicker(el, st.look, () => st.gender);
+    onboarding.redraw = draw;
     if (st.step === 5) cityPicker(el.querySelector('#obCity'), st.city, c => { st.city = c; });
     const op = el.querySelector('#ob-prof'); if (op){ op.addEventListener('input', () => { st.profName = op.value; }); if (!st.profName) setTimeout(() => op.focus(), 50); }
   };
