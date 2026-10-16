@@ -611,7 +611,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.9', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.10', tg:'gog_sonn'};
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
@@ -2451,6 +2451,7 @@ async function logIn(email, password){
 }
 const AUTH_ERR = {exists:'Такой аккаунт уже есть — переключись на «Вход»', bad_login:'Неверная почта или пароль', weak_password:'Пароль слишком простой, нужно хотя бы 6 символов',
   email_address_invalid:'Проверь адрес почты', validation_failed:'Проверь почту и пароль', over_request_rate_limit:'Слишком много попыток, подожди минуту', confirm_required:'Нужно подтвердить почту — проверь письмо'};
+const FORGOT_BY_EMAIL = false; // включить, когда подключим свою почту (SMTP) в Supabase
 // письмо со ссылкой для нового пароля; ссылка вернёт на сайт с #...type=recovery
 async function sendRecovery(email){
   const r = await fetch(SB_URL + '/auth/v1/recover?redirect_to=' + encodeURIComponent(location.origin + location.pathname), {method:'POST', headers:{apikey:SB_KEY, 'Content-Type':'application/json'}, body:JSON.stringify({email})});
@@ -3475,6 +3476,9 @@ document.addEventListener('click', ev => {
     case 'privacy': window.open('privacy.html', '_blank'); break;
     case 'del-account-yes': deleteAccount(el); break;
     case 'forgot': {
+      // пока письма Supabase доходят только владельцу — сброс пароля через поддержку (потом — вход через Telegram)
+      if (!FORGOT_BY_EMAIL){ openSheet(`${head('Забыли пароль?')}<p class="hint" style="margin:0 6px 16px">Напиши в поддержку в Telegram — сбросим пароль и поможем войти. Укажи почту, на которую регистрировался.</p>
+        <div class="actions"><a class="btn primary" href="https://t.me/${APP.tg}" target="_blank" rel="noopener">Написать @${APP.tg}</a><button class="btn tinted" data-act="close">Закрыть</button></div>`); break; }
       const em = ($('#l-email').value || '').trim().toLowerCase();
       if (!em){ toast('Впиши почту — пришлём на неё ссылку'); $('#l-email').focus(); break; }
       el.disabled = true; el.textContent = 'Отправляю…';
