@@ -101,6 +101,34 @@ try{var d=JSON.parse(localStorage.getItem('kadr.v1'));if(d&&d.profile&&d.profile
 :root[data-look] .bg i:nth-child(1){background:hsl(var(--h1) var(--s1) var(--bl))}
 :root[data-look] .bg i:nth-child(2){background:hsl(var(--h2) var(--s2) var(--bl))}
 :root[data-look] .bg i:nth-child(3){background:hsl(var(--h3) var(--s3) var(--bl))}
+:root{--b1:var(--blob1);--b2:var(--blob2);--b3:var(--blob3)}
+:root[data-look]{--b1:hsl(var(--h1) var(--s1) var(--bl));--b2:hsl(var(--h2) var(--s2) var(--bl));--b3:hsl(var(--h3) var(--s3) var(--bl))}
+/* мини-экран: как будет выглядеть приложение — меняется вместе с выбором */
+.lp{position:relative;height:210px;border-radius:24px;overflow:hidden;background:var(--base);border:1px solid var(--edge);margin-bottom:16px;transition:background .4s}
+.lp>i{position:absolute;border-radius:50%;filter:blur(26px);opacity:.9;transition:background .4s}
+.lp>i:nth-child(1){width:70%;height:80%;left:-20%;top:-25%;background:var(--b1)}
+.lp>i:nth-child(2){width:65%;height:75%;right:-20%;top:20%;background:var(--b2)}
+.lp>i:nth-child(3){width:60%;height:70%;left:5%;bottom:-40%;background:var(--b3)}
+:root[data-mode="black"] .lp>i{opacity:.6}
+.lp-in{position:relative;height:100%;padding:14px;display:flex;flex-direction:column;gap:8px;text-align:left}
+.lp-h{display:flex;justify-content:space-between;align-items:center}.lp-h b{font:700 19px var(--display);color:var(--fg)}
+.lp-h span{width:24px;height:24px;border-radius:50%;background:var(--accent)}
+.lp-row{display:flex;gap:8px}.lp-c{flex:1;height:42px;border-radius:12px;background:var(--glass);border:1px solid var(--edge)}
+.lp-w{flex:none;height:auto;padding:10px;display:flex;flex-direction:column;gap:6px}
+.lp-w em{display:block;height:7px;border-radius:4px;background:var(--fg3);width:72%}.lp-w em+em{width:45%}
+.lp-dock{margin-top:auto;align-self:center;display:flex;align-items:center;gap:16px;padding:6px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--edge)}
+.lp-dock span{width:14px;height:14px;border-radius:5px;background:var(--fg3)}.lp-dock .a{width:24px;height:24px;border-radius:50%;background:var(--accent)}
+.onb .swatches{gap:10px;padding:12px}
+.ava.photo{background-size:cover!important;background-position:center!important;color:transparent}
+.ava-pick{display:flex;align-items:center;gap:14px;margin:0 6px 16px}.ava-pick .ava{width:64px;height:64px;font-size:22px}
+/* свайп строки, как в Telegram: влево — действия, вправо — сделано */
+.row.swipe{transition:transform .25s cubic-bezier(.2,.9,.25,1)}
+.row.dragging{transition:none}
+.swacts{position:absolute;top:0;bottom:0;left:100%;display:flex;width:216px}
+.swacts button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:#fff}
+.swacts button span{font-size:20px}
+.swacts .s-pin{background:var(--orange)}.swacts .s-mute{background:var(--indigo)}.swacts .s-del{background:var(--red)}
+.swdone{position:absolute;top:0;bottom:0;right:100%;width:120px;display:flex;align-items:center;justify-content:flex-end;padding-right:18px;background:var(--green);color:#fff;font-weight:700}
 .swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:16px;margin-bottom:12px}
 .swatch{position:relative;aspect-ratio:1;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);transition:transform .2s}
 .swatch.on{transform:scale(.88);box-shadow:0 0 0 3px var(--base),0 0 0 5px var(--fg)}
@@ -503,7 +531,13 @@ a{color:inherit;text-decoration:none}
 .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translate(-50%,calc(-100% - env(safe-area-inset-top,0px) - 60px));opacity:0;z-index:99;padding:11px 18px;border-radius:999px;font-weight:600;font-size:15px;transition:transform .4s cubic-bezier(.2,.9,.25,1),opacity .3s;max-width:calc(100% - 32px);text-align:center}
 .toast.show{transform:translate(-50%,0);opacity:1}
 .toast{display:flex;align-items:center;gap:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.toast-undo{flex:none;color:var(--accent);font-weight:700;font-size:15px;padding:2px 2px 2px 10px;border-left:1px solid var(--sep)}
+.toast .tt{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.toast-undo{flex:none;color:var(--on-accent);background:var(--accent);font-weight:700;font-size:16px;padding:9px 16px;margin:-4px -10px -4px 0;border-radius:999px}
+.stick{position:sticky;bottom:calc(-1 * env(safe-area-inset-bottom,0px) - 18px);z-index:3;margin:0 -16px;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 18px);
+  background:linear-gradient(to top,var(--glass-strong) 70%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.stick + .actions{margin-top:4px}
+.sheet textarea{resize:none;overflow-y:auto}
+.linkbtn{display:block;margin:2px auto 0;padding:8px 12px;font-size:14px;font-weight:600;color:var(--fg2)}
 
 .install{display:flex;gap:12px;align-items:flex-start}
 .install p{margin:0;font-size:15px}
@@ -747,7 +781,20 @@ const TYPES = {
   other:  {one:'Другое', many:'Другое',   color:'var(--indigo)', ph:'Мастер-класс, продажа пресетов…'},
   task:   {one:'Дело',   many:'Дела',     color:'var(--green)',  ph:'Кофе с подругой'}
 };
-const EXP = {gear:'Аренда техники', studio:'Студия', transport:'Транспорт', soft:'Софт и подписки', props:'Реквизит', ads:'Реклама', edu:'Своё обучение', other:'Другое'};
+const EXP = {gear:'Аренда техники', studio:'Студия', transport:'Транспорт', soft:'Софт и подписки', props:'Реквизит', ads:'Реклама', edu:'Своё обучение', other:'Другое',
+  materials:'Материалы', rent:'Аренда места', tools:'Инструменты', tax:'Налоги'};
+// стартовый набор статей под профессию; пользователь меняет его сам (settings.expCats = [{k, l}])
+const EXP_DEFAULT = {
+  photo:['gear','studio','transport','soft','props','ads','edu','other'],
+  video:['gear','studio','transport','soft','props','ads','edu','other'],
+  beauty:['materials','rent','tools','transport','ads','edu','other'],
+  custom:['materials','rent','tools','transport','ads','tax','other']};
+function expCats(){
+  const own = data.settings && data.settings.expCats;
+  if (Array.isArray(own) && own.length) return own;
+  return (EXP_DEFAULT[(data.profile && data.profile.profession) || 'photo'] || EXP_DEFAULT.photo).map(k => ({k, l: EXP[k]}));
+}
+const expLabel = x => (expCats().find(c => c.k === x.cat) || {}).l || x.catName || EXP[x.cat] || 'Другое';
 const MONTHS = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
 const MONTHS_G = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const MONTHS_P = ['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'];
@@ -791,6 +838,8 @@ function ago(s){
 const initials = n => (n || '?').trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase();
 const hue = s => { let h = 0; for (const c of s || '') h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
 const ava = name => `<span class="ava" style="--h:${hue(name)}">${esc(initials(name))}</span>`;
+// своя фотография (Меню → Профиль); хранится уменьшенной в settings.avatar и синхронизируется
+const myAva = () => { const a = data.settings && data.settings.avatar; return a && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(a) ? `<span class="ava photo" style="background:url(${a})">•</span>` : ava(myName() || '•'); };
 // род: g('Ты заработал[а|]') -> «заработала» или «заработал»
 const g = s => String(s).replace(/\[([^|\]]*)\|([^\]]*)\]/g, (_, f, m) => (data.profile && data.profile.gender === 'm') ? m : f);
 const myName = () => (data.profile && data.profile.name) || '';
@@ -822,31 +871,41 @@ function applyTheme(gender, look){
   const mode = root.dataset.mode, base = mode ? getComputedStyle(root).getPropertyValue('--base').trim() : null;
   document.querySelectorAll('meta[name="theme-color"]').forEach((el, i) => el.setAttribute('content', base || (m ? '#07090a' : (i === 0 ? '#f4f1f7' : '#0b0a10'))));
 }
-// Меню → Оформление: фон (авто/светлый/тёмный/чёрный) и до трёх цветов из 15, как в Telegram. Видно сразу, сохраняется «Готово».
-function lookSheet(){
-  const cur = data.settings.look || {mode:'auto', c:[]};
-  const st = lookSheet.st = {mode: cur.mode || 'auto', c: [...(cur.c || [])]};
+const lookPreview = () => `<div class="lp" aria-hidden="true"><i></i><i></i><i></i><div class="lp-in">
+  <div class="lp-h"><b>Главная</b><span></span></div><div class="lp-row"><div class="lp-c"></div><div class="lp-c"></div></div>
+  <div class="lp-c lp-w"><em></em><em></em></div><div class="lp-c lp-w"><em></em><em></em></div>
+  <div class="lp-dock"><span></span><span></span><span class="a"></span><span></span><span></span></div></div></div>`;
+const LOOK_MODES = [['auto','Авто'],['light','Светлый'],['dark','Тёмный'],['black','Чёрный']];
+// выбор: фон и до трёх цветов; st = {mode, c}; gender — чья тема (в знакомстве ещё не сохранена)
+function lookPickerHtml(st){
+  return `${lookPreview()}
+    <div class="seg" style="margin-bottom:14px">${LOOK_MODES.map(([k, l]) => `<label><input type="radio" name="look-mode" value="${k}" ${st.mode === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
+    <p class="hint" style="margin:0 6px 8px">Цвета фона — от одного до трёх. Ничего не выбрано — цвета темы.</p>
+    <div class="swatches card glass lookSw"></div>`;
+}
+function bindLookPicker(root, st, gender){
+  const sw = root.querySelector('.lookSw');
   const draw = () => {
-    applyTheme(data.profile && data.profile.gender, st);
-    $('#lookSw').innerHTML = LOOK_COLORS.map(([h, sat, name], i) => { const n = st.c.indexOf(i);
-      return `<button class="swatch ${n >= 0 ? 'on' : ''}" data-i="${i}" aria-label="${name}${n >= 0 ? ', выбран' : ''}" style="background:hsl(${h} ${sat}% ${sat ? 58 : 45}%)">${n >= 0 ? `<b>${n + 1}</b>` : ''}</button>`; }).join('');
+    applyTheme(gender(), st);
+    sw.innerHTML = LOOK_COLORS.map(([h, sat, name], i) => { const n = st.c.indexOf(i);
+      return `<button type="button" class="swatch ${n >= 0 ? 'on' : ''}" data-i="${i}" aria-label="${name}${n >= 0 ? ', выбран' : ''}" style="background:hsl(${h} ${sat}% ${sat ? 58 : 45}%)">${n >= 0 ? `<b>${n + 1}</b>` : ''}</button>`; }).join('');
   };
-  const modes = [['auto','Авто'],['light','Светлый'],['dark','Тёмный'],['black','Чёрный']];
-  openSheet(`${head('Оформление')}
-    <div class="section-title" style="margin:0 6px 8px;font-size:17px">Фон</div>
-    <div class="seg" style="margin-bottom:18px">${modes.map(([k, l]) => `<label><input type="radio" name="look-mode" value="${k}" ${st.mode === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
-    <div class="section-title" style="margin:0 6px 4px;font-size:17px">Цвета</div>
-    <p class="hint" style="margin:0 6px 10px">Выбери от одного до трёх — из них соберётся фон. Ничего не выбрано — цвета темы.</p>
-    <div class="swatches card glass" id="lookSw"></div>
-    <div class="actions"><button class="btn primary" data-act="look-save">Готово</button><button class="btn tinted" data-act="look-reset">Как было</button></div>`);
-  $('#lookSw').addEventListener('click', ev => {
+  sw.addEventListener('click', ev => {
     const b = ev.target.closest('[data-i]'); if (!b) return; ev.stopPropagation();
     const i = +b.dataset.i, n = st.c.indexOf(i);
     if (n >= 0) st.c.splice(n, 1); else if (st.c.length >= 3){ toast('Не больше трёх — сними один из выбранных'); return; } else st.c.push(i);
     draw();
   });
-  document.querySelectorAll('input[name="look-mode"]').forEach(r => r.addEventListener('change', () => { st.mode = r.value; draw(); }));
+  root.querySelectorAll('input[name="look-mode"]').forEach(r => r.addEventListener('change', ev => { ev.stopPropagation(); st.mode = r.value; draw(); }));
   draw();
+}
+// Меню → Оформление (как в Telegram). Видно сразу, «Готово» сохраняет.
+function lookSheet(){
+  const cur = data.settings.look || {mode:'auto', c:[]};
+  const st = lookSheet.st = {mode: cur.mode || 'auto', c: [...(cur.c || [])]};
+  openSheet(`${head('Оформление')}${lookPickerHtml(st)}
+    <div class="actions"><button class="btn primary" data-act="look-save">Готово</button><button class="btn tinted" data-act="look-reset">Как было</button></div>`);
+  bindLookPicker($('#sheet'), st, () => data.profile && data.profile.gender);
 }
 function phrase(i){
   const list = data.profile && data.profile.gender === 'm' ? prof().phrasesM : prof().phrasesF;
@@ -876,7 +935,7 @@ function normalize(d){
     deleted:d.deleted||{}, lastBackup:d.lastBackup||null, ach:d.ach||{}});
   // старые записи: имя клиента строкой -> карточка клиента
   for (const e of out.entries){
-    if (!e.clientId && e.client){
+    if (!e.clientId && e.client && !e.keepName){
       let c = out.clients.find(x => x.name.toLowerCase() === e.client.toLowerCase());
       if (!c){ c = touch({id:uid(), name:e.client, phone:'', insta:'', note:'', created:Date.now()}); out.clients.push(c); }
       e.clientId = c.id;
@@ -982,12 +1041,14 @@ function stats(ym){
     const p = payState(s); if (p) unpaid += p.due;
   }
   const exp = {}; let expT = 0;
+  let expPlan = 0;
   for (const x of data.expenses){
     if (!x.date || x.date.slice(0,7) !== ym) continue;
+    if (x.paid === false){ expPlan += +x.amount||0; continue; } // ожидается — не считаем, пока не подтвердили
     exp[x.cat] = (exp[x.cat]||0) + (+x.amount||0); expT += +x.amount||0;
   }
   const incT = Object.values(inc).reduce((a,b)=>a+b,0);
-  return {inc, incT, unpaid, got, exp, expT, net: incT - expT, count};
+  return {inc, incT, unpaid, got, exp, expT, expPlan, net: incT - expT, count};
 }
 // заработано за месяц = деньги, которые реально пришли в этом месяце
 function earnedIn(ym){ return stats(ym).incT; }
@@ -1061,7 +1122,7 @@ function render(){
   let html = `
     <header class="top">
       <div><div class="hello">${hello}${myName() ? ', ' + esc(myName()) : ''}${data.profile && data.profile.gender === 'm' ? '' : ' ♥'}</div><h1>${titles[ui.tab]}</h1></div>
-      <button class="me-btn" data-act="settings" aria-label="Меню">${ava(myName() || '•')}</button>
+      <button class="me-btn" data-act="settings" aria-label="Меню">${myAva()}</button>
     </header>`;
   if (ui.tab === 'money' || ui.tab === 'history') html += `
     <div class="month glass">
@@ -1100,6 +1161,8 @@ function entryRow(e, opts = {}){
   if (e.time && e.type !== 'retouch') bits.push(e.time);
   if (e.type === 'lesson') bits.push(e.format === 'call' ? 'созвон' : 'встреча');
   if (isRepeat(e)) bits.push('🔁 ' + repeatLabel(e));
+  if (e.mute) bits.push('🔕');
+  if (e.pin) bits.unshift('📌');
   const cn = opts.noClient ? '' : clientName(e);
   if (cn) bits.push(cn);
   if (!bits.length) bits.push(t.one);
@@ -1128,21 +1191,31 @@ const durOf = e => +e.dur || 60;
 // ---------- повторяющиеся дела ----------
 // e.repeat = {f:'daily'|'weekdays'|'weekly'|'monthly', until:'YYYY-MM-DD'|''}; e.date — первый день.
 // У каждого повтора своя галочка (e.doneOn[дата]) и свои удаления/переносы (e.skip = [даты]).
-const REPEATS = [['', 'Не повторять'], ['daily', 'Каждый день'], ['weekdays', 'По будням'], ['weekly', 'Каждую неделю'], ['monthly', 'Каждый месяц']];
+const REPEATS = [['', 'Не повторять'], ['hours', 'Несколько раз в день'], ['daily', 'Каждый день'], ['every2', 'Через день'], ['weekdays', 'По будням'], ['weekly', 'Каждую неделю'], ['monthly', 'Каждый месяц']];
+// «каждые N часов»: в один день несколько раз — с e.time до repeat.to; ключ такого повтора «дата время»
+function repTimes(e){
+  const r = e.repeat, start = toMin(e.time || '08:00'), end = Math.max(toMin(r.to || '21:00'), start), step = Math.max(1, +r.step || 3) * 60, out = [];
+  for (let m = start; m <= end && out.length < 24; m += step) out.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
+  return out;
+}
 const isRepeat = e => !!(e && e.repeat && e.repeat.f);
 function occursOn(e, ds){
   if (!isRepeat(e)) return ds === e.date;
   const r = e.repeat;
   if (ds < e.date || (r.until && ds > r.until) || (e.skip || []).includes(ds)) return false;
   const d = parseD(ds), s0 = parseD(e.date);
-  if (r.f === 'daily') return true;
+  if (r.f === 'daily' || r.f === 'hours') return true;
+  if (r.f === 'every2') return Math.round((d - s0) / 864e5) % 2 === 0;
   if (r.f === 'weekdays') return d.getDay() >= 1 && d.getDay() <= 5;
   if (r.f === 'weekly') return d.getDay() === s0.getDay();
   if (r.f === 'monthly') return d.getDate() === s0.getDate();
   return false;
 }
 // повтор как отдельная запись на конкретный день (id тот же, occ — его дата)
-const occOf = (e, ds) => ({...e, date: ds, occ: ds, done: !!(e.doneOn && e.doneOn[ds])});
+const occOf = (e, ds, tm) => { const k = tm ? ds + ' ' + tm : ds; return {...e, date: ds, time: tm || e.time, occ: k, done: !!(e.doneOn && e.doneOn[k])}; };
+// повтор по ключу из разметки: «2026-10-16» или «2026-10-16 14:00»
+const occFrom = (e, k) => k.length > 10 ? occOf(e, k.slice(0, 10), k.slice(11)) : occOf(e, k);
+const occDay = k => dayLabel(k.slice(0, 10)).toLowerCase() + (k.length > 10 ? ' в ' + k.slice(11) : '');
 // все записи в интервале дат, с развёрнутыми повторами
 function expandEntries(from, to){
   const out = [];
@@ -1151,12 +1224,18 @@ function expandEntries(from, to){
     if (!isRepeat(e)){ if (e.date >= from && e.date <= to) out.push(e); continue; }
     const end = e.repeat.until && e.repeat.until < to ? e.repeat.until : to;
     let ds = e.date > from ? e.date : from, guard = 0;
-    while (ds <= end && guard++ < 900){ if (occursOn(e, ds)) out.push(occOf(e, ds)); ds = shiftDay(ds, 1); }
+    while (ds <= end && guard++ < 900){
+      if (occursOn(e, ds)){
+        if (e.repeat.f === 'hours'){ for (const tm of repTimes(e)) if (!(e.skip || []).includes(ds + ' ' + tm)) out.push(occOf(e, ds, tm)); }
+        else out.push(occOf(e, ds));
+      }
+      ds = shiftDay(ds, 1);
+    }
   }
   return out;
 }
 const occAttr = e => e && e.occ ? ` data-occ="${e.occ}"` : '';
-const repeatLabel = e => isRepeat(e) ? (REPEATS.find(r => r[0] === e.repeat.f) || ['',''])[1].toLowerCase() : '';
+const repeatLabel = e => !isRepeat(e) ? '' : e.repeat.f === 'hours' ? `каждые ${+e.repeat.step || 3} ч` : (REPEATS.find(r => r[0] === e.repeat.f) || ['',''])[1].toLowerCase();
 // время: два барабана (часы и минуты через 10) вместо поминутного; значение — в скрытом поле, как раньше
 function timePicker(id, name, v){
   const [h, m] = /^\d{2}:\d{2}$/.test(v || '') ? v.split(':') : ['', ''];
@@ -1174,6 +1253,48 @@ document.addEventListener('change', ev => {
   inp.value = h ? h + ':' + m : '';
   inp.dispatchEvent(new Event('input', {bubbles:true}));
 });
+// Свайп записи (Главная, Календарь), как в Telegram: влево — «Закрепить», «Без звука», «Удалить»; вправо — «Сделано».
+(function(){
+  let row = null, sx = 0, sy = 0, dx = 0, mode = '', open = null, swallow = false;
+  const close = r => { if (!r) return; r.style.transform = ''; setTimeout(() => { if (r !== open) r.querySelectorAll('.swacts,.swdone').forEach(n => n.remove()); }, 260); };
+  const entryOf = r => { const e = data.entries.find(x => x.id === r.dataset.id); return e && r.dataset.occ && isRepeat(e) ? {e, o: occFrom(e, r.dataset.occ)} : {e, o: e}; };
+  document.addEventListener('touchstart', ev => {
+    const r = ev.target.closest('#app .list .row[data-act="edit"]');
+    if (open && r !== open){ close(open); open = null; }
+    if (!r || ev.touches.length > 1) { row = null; return; }
+    row = r; sx = ev.touches[0].clientX; sy = ev.touches[0].clientY; dx = 0; mode = '';
+  }, {passive:true});
+  document.addEventListener('touchmove', ev => {
+    if (!row) return;
+    const x = ev.touches[0].clientX - sx, y = ev.touches[0].clientY - sy;
+    if (!mode){ if (Math.abs(x) < 10 && Math.abs(y) < 10) return; mode = Math.abs(x) > Math.abs(y) * 1.2 ? 'h' : 'v'; if (mode === 'h') prepare(row); }
+    if (mode !== 'h') return;
+    const base = row === open ? -216 : 0, {o} = entryOf(row);
+    dx = Math.max(-240, Math.min(checkable(o) ? 130 : 0, base + x));
+    row.classList.add('swipe', 'dragging'); row.style.transform = `translateX(${dx}px)`;
+  }, {passive:true});
+  document.addEventListener('touchend', () => {
+    if (!row || mode !== 'h'){ row = null; return; }
+    const r = row; row = null; r.classList.remove('dragging'); swallow = true; setTimeout(() => { swallow = false; }, 350);
+    if (dx < -70){ r.style.transform = 'translateX(-216px)'; open = r; if (navigator.vibrate) navigator.vibrate(8); return; }
+    if (dx > 90){ const b = r.querySelector('[data-act="done"]'); close(r); open = null; if (b) setTimeout(() => b.click(), 120); return; }
+    close(r); if (open === r) open = null;
+  });
+  // нажатие после свайпа не должно открывать карточку
+  document.addEventListener('click', ev => { if (swallow && !ev.target.closest('.swacts')){ ev.stopPropagation(); ev.preventDefault(); } }, true);
+  function prepare(r){
+    if (r.querySelector('.swacts')) return;
+    const {e} = entryOf(r); if (!e) return;
+    r.insertAdjacentHTML('beforeend', `<div class="swacts">
+      <button class="s-pin" data-act="sw-pin" data-id="${e.id}"><span>📌</span>${e.pin ? 'Открепить' : 'Закрепить'}</button>
+      <button class="s-mute" data-act="sw-mute" data-id="${e.id}"><span>${e.mute ? '🔔' : '🔕'}</span>${e.mute ? 'Со звуком' : 'Без звука'}</button>
+      <button class="s-del" data-act="sw-del" data-id="${e.id}"${r.dataset.occ ? ` data-occ="${r.dataset.occ}"` : ''}><span>🗑</span>Удалить</button></div>`
+      + (checkable(entryOf(r).o) ? `<div class="swdone">${entryOf(r).o.done ? 'Вернуть' : 'Сделано ✓'}</div>` : ''));
+  }
+})();
+// поле заметки растёт вместе с текстом, но не выше 40% экрана — дальше прокрутка внутри
+function grow(t){ t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, innerHeight * 0.4) + 'px'; }
+document.addEventListener('input', ev => { if (ev.target.matches && ev.target.matches('.sheet textarea')) grow(ev.target); });
 function byDate(){
   const m = {};
   // окно вокруг выбранного дня — в нём разворачиваем повторы
@@ -1203,7 +1324,9 @@ function calNav(k){
   render();
 }
 // список записей: сначала блоки приоритетов (только те уровни, что выставлены), ниже — всё остальное как обычно
+const prioResetBtn = () => data.entries.some(e => e.prio) ? `<button class="linkbtn" data-act="prio-reset">Сбросить все приоритеты</button>` : '';
 function prioList(list, opts = {}){
+  list = [...list.filter(e => e.pin), ...list.filter(e => !e.pin)]; // закреплённое — сверху
   const rows = l => `<div class="list glass">${l.map(e => entryRow(e, opts)).join('')}</div>`;
   const groups = [3, 2, 1].map(p => [p, list.filter(e => e.prio === p)]).filter(([, l]) => l.length);
   if (!groups.length) return rows(list);
@@ -1257,7 +1380,7 @@ function renderHome(){
   // сегодня
   const todayList = (byDate()[t] || []).filter(e => !od.some(o => o.id === e.id && o.date === e.date));
   h += `<div class="section-title">Сегодня</div>`;
-  h += todayList.length ? prioList(todayList)
+  h += todayList.length ? prioList(todayList) + prioResetBtn()
     : `<button class="card glass empty" data-act="new-on" data-d="${t}" style="padding:18px;width:100%"><b style="font-size:16px">Сегодня свободно</b><p>Нажми, чтобы что-то запланировать</p></button>`;
 
   // ближайшее — следующие 5 записей после сегодня
@@ -1296,17 +1419,15 @@ function moveEntry(id, d, tm, occ){
   closeSheet(); render(); toast(`Перенесено на ${dayLabel(d).toLowerCase()}${tm ? ' в ' + tm : ''}`);
 }
 // при запуске раз в день: «ты не закрыл(а) …, переставить?»
+// при каждом входе в приложение (и возвращении через полчаса): есть незакрытое — спрашиваем
 function askOverdue(){
-  if (!overdueList().length || sheetOpen()) return;
-  let asked = ''; try { asked = localStorage.getItem('kadr.overdueAsked') || ''; } catch(e) {}
-  if (asked === today()) return;
-  try { localStorage.setItem('kadr.overdueAsked', today()); } catch(e) {}
+  if (!overdueList().length || sheetOpen() || document.querySelector('.onb')) return;
   overdueSheet();
 }
 function overdueSheet(){
   const od = overdueList();
   openSheet(`${head(od.length === 1 ? 'Не закрыто' : 'Не закрыто · ' + od.length)}
-    <p class="hint" style="margin:0 6px 12px">${od.length === 1 ? g('Ты не отметил[а|] это сделанным. Перенести на другой день?') : g('Ты не отметил[а|] их сделанными. Нажми на «Перенести» или поставь галочку.')}</p>
+    <p class="hint" style="margin:0 6px 12px">${od.length === 1 ? g('Время прошло, а галочки нет. Отметь сделанным (кружок слева) или перенеси на другой день и время.') : g('Время прошло, а галочек нет. Отметь сделанным (кружок слева) или нажми «Перенести» — выберешь день и время.')}</p>
     <div class="list" id="odList" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:12px">${od.map(e => entryRow(e, {showDate:true, extraPill:`<button class="pill late" data-act="resched" data-id="${e.id}"${occAttr(e)}>Перенести</button>`})).join('')}</div>
     <button class="btn tinted" data-act="close">Позже</button>`);
 }
@@ -1413,7 +1534,7 @@ function calMonth(map){
   const list = map[ui.selDate] || [];
   const sum = list.reduce((a,e) => a + (+e.amount||0), 0);
   h += `<div class="day ${ui.selDate===t?'today':''}"><span>${dayLabel(ui.selDate)}</span><span class="num">${sum?rub(sum):''}</span></div>`;
-  h += list.length ? prioList(list)
+  h += list.length ? prioList(list) + prioResetBtn()
     : `<button class="card glass empty" data-act="new-on" data-d="${ui.selDate}" style="padding:20px;width:100%"><b style="font-size:16px">Свободный день</b><p>Нажми, чтобы добавить запись</p></button>`;
   return h;
 }
@@ -1430,10 +1551,12 @@ function clientRow(c, sub){
     <div class="rt"><div class="t1">${esc(c.name)}</div><div class="t2">${esc(sub || bits.join(' · '))}</div></div>
     <div class="rr">${st.total ? `<div class="amt">${rub(st.total)}</div>` : ''}</div></div>`;
 }
+// клиент «с деньгами» — есть оплачиваемые записи или абонементы; остальные — друзья, родные, коллеги из дел
+const isPaying = st => st.total > 0 || st.isStudent;
 function clientListHtml(){
-  const q = ui.q.trim().toLowerCase();
+  const q = ui.q.trim().toLowerCase(), want = ui.cfilter || 'pay';
   const list = data.clients.filter(c => !q || c.name.toLowerCase().includes(q) || (c.phone||'').includes(q) || (c.insta||'').toLowerCase().includes(q))
-    .map(c => ({c, st: clientStats(c.id)}))
+    .map(c => ({c, st: clientStats(c.id)})).filter(x => q || (want === 'pay') === isPaying(x.st))
     .sort((a,b) => (b.st.next || b.st.last || '').localeCompare(a.st.next || a.st.last || '') || a.c.name.localeCompare(b.c.name));
   if (!list.length) return q ? `<div class="empty"><b>Никого не нашлось</b><p>Проверь, как написано имя.</p></div>` : '';
   return `<div class="list glass">${list.map(({c,st}) => clientRow(c, st.next ? `следующая запись ${shortDate(st.next)}` : st.last ? `была ${ago(st.last)}` : '')).join('')}</div>`;
@@ -1462,7 +1585,10 @@ function renderClients(){
     h += `<div class="section-title">Пора напомнить о себе</div><div class="section-note">${prof().remind.note}</div>`;
     h += `<div class="list glass">${remind.map(({c,st}) => clientRow(c, `${prof().unit.last} ${ago(st.lastShoot)}`)).join('')}</div>`;
   }
-  h += `<div class="section-title">Все · ${data.clients.length}</div><div id="clientList">${clientListHtml()}</div>`;
+  const nPay = data.clients.filter(c => isPaying(clientStats(c.id))).length, nFree = data.clients.length - nPay;
+  h += `<div class="seg glass-seg" role="radiogroup" aria-label="Кто">${[['pay', 'Клиенты · ' + nPay], ['free', 'Без оплаты · ' + nFree]].map(([k, l]) => `<label><input type="radio" name="cfilter" value="${k}" data-act="cfilter" ${(ui.cfilter || 'pay') === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>`;
+  if ((ui.cfilter || 'pay') === 'free') h += `<div class="section-note">Друзья, родные, коллеги — люди из дел и записей без денег.</div>`;
+  h += `<div id="clientList">${clientListHtml() || `<div class="empty"><b>Пока никого</b></div>`}</div>`;
   return h + `</div>`;
 }
 function subCard(s, withName){
@@ -1615,13 +1741,14 @@ function renderMoney(){
   h += `</div>`;
 
   const exps = data.expenses.filter(x => x.date && x.date.slice(0,7) === ui.month).sort((a,b) => b.date.localeCompare(a.date));
-  h += `<div class="section-title">Расходы${s.expT ? ' · ' + rub(s.expT) : ''}</div>`;
-  if (exps.length){
-    h += `<div class="list glass">${exps.map(x => `<div class="row" data-act="edit-exp" data-id="${x.id}" role="button" tabindex="0">
+  const expRow = x => `<div class="row" data-act="edit-exp" data-id="${x.id}" role="button" tabindex="0">
       <span class="ic" style="--c:var(--gray)">${ICONS.expense}</span>
-      <div class="rt"><div class="t1">${esc(x.title || EXP[x.cat] || 'Расход')}</div><div class="t2">${esc(EXP[x.cat]||'Другое')} · ${shortDate(x.date)}</div></div>
-      <div class="rr"><div class="amt">−${rub(x.amount)}</div></div></div>`).join('')}</div>`;
-  }
+      <div class="rt"><div class="t1">${esc(x.title || expLabel(x))}</div><div class="t2">${esc(expLabel(x))} · ${shortDate(x.date)}</div></div>
+      <div class="rr"><div class="amt">−${rub(x.amount)}</div>${x.paid === false ? `<button class="pill wait" data-act="exp-paid" data-id="${x.id}">${x.date <= today() ? 'Оплачено?' : 'Ожидается'}</button>` : ''}</div></div>`;
+  const plan = exps.filter(x => x.paid === false), done = exps.filter(x => x.paid !== false);
+  if (plan.length) h += `<div class="section-title">Ожидаемые расходы · ${rub(s.expPlan)}</div><div class="section-note">Ещё не оплачены и не вычитаются. Нажми «Оплачено?», когда заплатишь.</div><div class="list glass">${plan.map(expRow).join('')}</div>`;
+  h += `<div class="section-title">${plan.length ? 'Оплаченные расходы' : 'Расходы'}${s.expT ? ' · ' + rub(s.expT) : ''}</div>`;
+  if (done.length) h += `<div class="list glass">${done.map(expRow).join('')}</div>`;
   h += `<button class="btn glass tinted" data-act="add-exp">${ICONS.plus}Добавить расход</button>`;
   return h + `</div>`;
 }
@@ -1713,6 +1840,9 @@ function openSheet(html){
   const sh = $('#sheet'), sc = $('#scrim');
   clearTimeout(openSheet.t);
   sh.innerHTML = `<div class="grabber"></div>` + html;
+  // без подсказки «Автозаполнить контакт» над клавиатурой (кроме почты и пароля)
+  sh.querySelectorAll('input:not([type=hidden]):not([type=email]):not([type=password]):not([autocomplete])').forEach(i => i.setAttribute('autocomplete', 'off'));
+  requestAnimationFrame(() => sh.querySelectorAll('textarea').forEach(grow));
   sh.scrollTop = 0;
   sh.hidden = false; sc.hidden = false;
   document.documentElement.style.overflow = 'hidden';
@@ -1788,7 +1918,12 @@ function entryForm(e, preset = {}){
       </div>
       <div class="form" id="repeatBox" ${e.type === 'task' ? '' : 'hidden'}>
         <div class="field"><label for="f-rep">Повтор</label><select id="f-rep" name="repeat">${REPEATS.map(([v,l]) => `<option value="${v}" ${(e.repeat && e.repeat.f || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-        <div class="field" id="untilField" ${isRepeat(e) ? '' : 'hidden'}><label for="f-until">До</label><input type="date" id="f-until" name="until" value="${esc(e.repeat && e.repeat.until || '')}"></div>
+        <div id="hoursBox" ${e.repeat && e.repeat.f === 'hours' ? '' : 'hidden'}>
+          <div class="field"><label for="f-step">Каждые</label><select id="f-step" name="step">${[1,2,3,4,5,6].map(n => `<option value="${n}" ${(+(e.repeat && e.repeat.step) || 3) === n ? 'selected' : ''}>${n} ${plural(n,'час','часа','часов')}</option>`).join('')}</select></div>
+          <div class="field"><label for="f-rep-to">До времени</label>${timePicker('f-rep-to', 'repto', e.repeat && e.repeat.to || '21:00')}</div>
+          <p class="hint" style="margin:0 0 10px">Первый раз — во время, указанное выше. Например, еда каждые 3 часа с 8:00 до 20:00.</p>
+        </div>
+        <div class="field" id="untilField" ${isRepeat(e) ? '' : 'hidden'}><label for="f-until">До даты</label><input type="date" id="f-until" name="until" value="${esc(e.repeat && e.repeat.until || '')}"></div>
       </div>
       ${occ ? `<p class="hint" style="margin:-6px 6px 14px">🔁 Это повторяющееся дело. Изменения применятся ко всем повторам; дата выше — день начала.</p>` : ''}
       <div class="form">
@@ -1809,9 +1944,9 @@ function entryForm(e, preset = {}){
       </div>
       <div class="form"><div class="field col"><label for="f-note">Заметка</label><textarea id="f-note" name="note" rows="2" placeholder="${e.type==='task'?'С кем, что взять с собой…':'Локация, образы, пожелания…'}">${esc(e.note||'')}</textarea></div></div>
       <p class="warn" id="clashWarn" hidden></p>
+      <div class="stick"><button type="submit" class="btn primary" style="width:100%">${isNew ? 'Добавить' : 'Сохранить'}</button></div>
       <div class="actions">
-        <button type="submit" class="btn primary">${isNew ? 'Добавить' : 'Сохранить'}</button>
-        ${isNew ? '' : occ ? `<button type="button" class="btn danger" data-act="del-occ" data-id="${e.id}" data-occ="${occ}">Удалить только ${dayLabel(occ).toLowerCase()}</button>
+        ${isNew ? '' : occ ? `<button type="button" class="btn danger" data-act="del-occ" data-id="${e.id}" data-occ="${occ}">Удалить только ${occDay(occ)}</button>
         <button type="button" class="btn danger" data-act="del-entry" data-id="${e.id}">Удалить все повторы</button>`
         : `<button type="button" class="btn danger" data-act="del-entry" data-id="${e.id}">Удалить</button>`}
       </div>
@@ -1819,7 +1954,8 @@ function entryForm(e, preset = {}){
   const form = $('#entryForm');
   const curType = () => form.querySelector('input[name="f-type"]:checked').value;
   // повтор: показываем «До», а галочку «Сделано» у серии прячем — она ставится у каждого дня в списке
-  const syncRepeat = () => { const r = !!$('#f-rep').value && curType() === 'task'; $('#untilField').hidden = !r; if (r) $('#doneBox').hidden = true; };
+  const syncRepeat = () => { const r = !!$('#f-rep').value && curType() === 'task'; $('#untilField').hidden = !r; $('#hoursBox').hidden = !(r && $('#f-rep').value === 'hours'); if (r) $('#doneBox').hidden = true;
+    if (r && $('#f-rep').value === 'hours' && !$('#f-time').value) setTime('f-time', '08:00'); };
   $('#f-rep').addEventListener('change', syncRepeat); syncRepeat();
   $('#iconPick').addEventListener('click', () => { $('#emojiGrid').hidden = !$('#emojiGrid').hidden; });
   $('#emojiGrid').addEventListener('click', ev => {
@@ -1908,7 +2044,7 @@ function entryForm(e, preset = {}){
       subId: subId || undefined,
       amount, prepaid, paid: !!fd.get('paid') || (amount > 0 && prepaid >= amount),
       done: type === 'retouch' || (type === 'task' && !fd.get('repeat')) ? !!fd.get('done') : undefined,
-      repeat: type === 'task' && fd.get('repeat') ? {f: fd.get('repeat'), until: fd.get('until') || ''} : undefined,
+      repeat: type === 'task' && fd.get('repeat') ? {f: fd.get('repeat'), until: fd.get('until') || '', ...(fd.get('repeat') === 'hours' ? {step: +fd.get('step') || 3, to: fd.get('repto') || '21:00'} : {})} : undefined,
       doneOn: type === 'task' && fd.get('repeat') ? e.doneOn : undefined,
       skip: type === 'task' && fd.get('repeat') ? e.skip : undefined,
       note: fd.get('note').trim(), created: e.created || Date.now(), u: Date.now()
@@ -1927,7 +2063,7 @@ function entryForm(e, preset = {}){
     }
     if (isNew) data.entries.push(rec); else data.entries[data.entries.findIndex(x => x.id === e.id)] = rec;
     persist();
-    const back = occ && isRepeat(rec) ? occ : rec.date; // правили повтор — остаёмся на его дне
+    const back = occ && isRepeat(rec) ? occ.slice(0, 10) : rec.date; // правили повтор — остаёмся на его дне
     ui.month = back.slice(0,7); ui.selDate = back;
     closeSheet(); render();
     const sub = subId && subById(subId);
@@ -1945,10 +2081,12 @@ function cheer(rec, sub){
 }
 
 function expenseForm(x){
-  const isNew = !x; x = x || {cat:'gear', date: defaultDate()};
+  const isNew = !x; x = x || {cat: expCats()[0].k, date: defaultDate()};
   openSheet(`${head(isNew ? 'Новый расход' : 'Расход')}
     <form id="expForm" autocomplete="off">
-      <div class="cats" role="radiogroup" aria-label="Категория">${Object.entries(EXP).map(([k,l]) => `<label><input type="radio" name="e-cat" value="${k}" ${x.cat===k?'checked':''}><span>${l}</span></label>`).join('')}</div>
+      <div class="cats" role="radiogroup" aria-label="Категория">${(() => { const cats = expCats(); if (x.cat && !cats.some(c => c.k === x.cat)) cats.push({k: x.cat, l: expLabel(x)});
+        return cats.map(({k, l}) => `<label><input type="radio" name="e-cat" value="${esc(k)}" ${x.cat===k?'checked':''}><span>${esc(l)}</span></label>`).join(''); })()}</div>
+      <button type="button" class="linkbtn" data-act="exp-cats">✎ Настроить статьи</button>
       <div class="form">
         <div class="field"><label for="e-amount">Сумма, ₽</label><input id="e-amount" name="amount" inputmode="decimal" value="${x.amount||''}" placeholder="0" required></div>
         <div class="field"><label for="e-date">Дата</label><input type="date" id="e-date" name="date" value="${esc(x.date)}" required></div>
@@ -1964,12 +2102,27 @@ function expenseForm(x){
     const fd = new FormData(ev.target);
     const amount = parseAmount(fd.get('amount'));
     if (!amount){ toast('Введи сумму расхода'); $('#e-amount').focus(); return; }
-    const rec = touch({id: x.id || uid(), cat: fd.get('e-cat'), amount, date: fd.get('date') || defaultDate(), title: fd.get('title').trim()});
+    const date = fd.get('date') || defaultDate(), cat = fd.get('e-cat') || 'other';
+    // будущий расход — «ожидается» и не считается, пока не подтвердишь оплату; прошедший — уже оплачен
+    const paid = date > today() ? false : isNew ? true : x.paid !== false;
+    const rec = touch({id: x.id || uid(), cat, catName: (expCats().find(c => c.k === cat) || {}).l || x.catName, amount, date, title: fd.get('title').trim(), paid});
     if (isNew) data.expenses.push(rec); else data.expenses[data.expenses.findIndex(y => y.id === x.id)] = rec;
     persist(); ui.month = rec.date.slice(0,7);
-    closeSheet(); render(); toast(isNew ? 'Расход записан' : 'Сохранено');
+    closeSheet(); render(); toast(!rec.paid ? 'Расход запланирован — посчитаю, когда подтвердишь оплату' : isNew ? 'Расход записан' : 'Сохранено');
   });
 }
+// редактор статей расходов
+function expCatsSheet(){
+  const cats = expCats();
+  openSheet(`${head('Статьи расходов')}
+    <p class="hint" style="margin:0 6px 12px">Оставь только то, на что ты тратишь. Старые расходы не пропадут.</p>
+    <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:12px">${cats.map((c, i) => `<div class="row"><div class="rt"><div class="t1">${esc(c.l)}</div></div>
+      <button class="pill" data-act="exp-cat-del" data-i="${i}" style="color:var(--red)">Удалить</button></div>`).join('')}
+      <div class="row" style="gap:8px"><input id="ec-new" maxlength="30" placeholder="Новая статья, например «Аренда»" autocomplete="off" style="flex:1;min-width:0;border:0;background:none;font-size:17px;outline:none">
+      <button class="pill" data-act="exp-cat-add" style="color:var(--accent)">Добавить</button></div></div>
+    <div class="actions"><button class="btn primary" data-act="exp-cats-done">Готово</button><button class="btn tinted" data-act="exp-cats-reset">Вернуть стандартные</button></div>`);
+}
+function setExpCats(list){ data.settings = {...data.settings, expCats: list}; data.settingsU = Date.now(); persist(); expCatsSheet(); }
 
 // «+»: три раздела — заработок, личное (без денег), учёт; внутри — варианты.
 // Список настраивается: лишнее можно скрыть, своё — добавить (settings.addHide = ['раздел:ключ'], settings.addOwn = {раздел:[{e,t}]}).
@@ -2597,9 +2750,27 @@ function cityPicker(root, current, onPick){
   q.addEventListener('keydown', ev => { if (ev.key === 'Enter'){ ev.preventDefault(); clearTimeout(tmr); search(); } });
 }
 function saveProfile(p){ data.profile = {...(data.profile || {}), ...p}; data.profileU = Date.now(); persist(); Object.keys(sunCache).forEach(k => delete sunCache[k]); loadWeather(); }
+// фото уменьшаем до 192×192 (квадрат по центру), ~15 КБ — чтобы не раздувать данные
+function setAvatar(file){
+  const img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => {
+    const n = 192, cv = document.createElement('canvas'); cv.width = cv.height = n;
+    const k = Math.min(img.width, img.height), x = cv.getContext('2d');
+    x.drawImage(img, (img.width - k) / 2, (img.height - k) / 2, k, k, 0, 0, n, n);
+    URL.revokeObjectURL(url);
+    data.settings = {...data.settings, avatar: cv.toDataURL('image/jpeg', 0.82)}; data.settingsU = Date.now(); persist();
+    render(); profileSheet(); toast('Фото обновлено');
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('Не получилось открыть фото'); };
+  img.src = url;
+}
 function profileSheet(){
   const p = data.profile || {};
   openSheet(`${head('Профиль')}
+    <div class="ava-pick"><button type="button" data-act="ava-pick" aria-label="Выбрать фото">${myAva()}</button>
+      <div><button type="button" class="linkbtn" style="margin:0;padding:4px 0;color:var(--accent)" data-act="ava-pick">${data.settings.avatar ? 'Сменить фото' : 'Добавить фото'}</button>
+      ${data.settings.avatar ? `<button type="button" class="linkbtn" style="margin:0;padding:4px 0" data-act="ava-del">Убрать фото</button>` : ''}</div>
+      <input type="file" id="ava-file" accept="image/*" hidden></div>
     <form id="profForm" autocomplete="off">
       <div class="form"><div class="field"><label for="pf-name">Имя</label><input id="pf-name" value="${esc(p.name||'')}" placeholder="Как к тебе обращаться"></div></div>
       <div class="seg"><label><input type="radio" name="pf-g" value="f" ${p.gender!=='m'?'checked':''}><span>Обращаться «она»</span></label><label><input type="radio" name="pf-g" value="m" ${p.gender==='m'?'checked':''}><span>Обращаться «он»</span></label></div>
@@ -2609,6 +2780,7 @@ function profileSheet(){
       <div id="pfCity"></div>
       <button class="btn primary" type="submit" style="margin-top:14px">Сохранить</button>
     </form>`);
+  $('#ava-file').addEventListener('change', ev => { const f = ev.target.files && ev.target.files[0]; if (f) setAvatar(f); });
   let city = p.city || null;
   cityPicker($('#pfCity'), city, c => { city = c; });
   // тему видно сразу; если закрыть без сохранения — вернётся прежняя
@@ -2621,7 +2793,7 @@ function profileSheet(){
   });
 }
 function onboarding(){
-  const st = {step:0, name:'', gender:'f', city:null, profession:'photo', profName:''};
+  const st = {step:0, name:'', gender:'f', city:null, profession:'photo', profName:'', look:{mode:'auto', c:[]}};
   const el = document.createElement('div'); el.className = 'onb'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
   document.body.appendChild(el);
   const TOUR = () => {
@@ -2638,7 +2810,7 @@ function onboarding(){
   const profRow = (k, color) => `<button class="row" data-ob="prof" data-p="${k}"><span class="ic" style="--c:${color}">${PROF_ICONS[k].shoot}</span>
     <div class="rt"><div class="t1">${PROFS[k].name}</div><div class="t2">${PROFS[k].work}</div></div>
     <span class="check ${st.profession === k ? 'on' : ''}">${ICONS.tick}</span></button>`;
-  const dots = () => `<div class="onb-dots">${[0,1,2,3,4,5,6].map(i => `<i class="${i===st.step?'on':''}"></i>`).join('')}</div>`;
+  const dots = () => `<div class="onb-dots">${[0,1,2,3,4,5,6,7].map(i => `<i class="${i===st.step?'on':''}"></i>`).join('')}</div>`;
   const draw = () => {
     let body = '', btn = 'Дальше', skip = '';
     if (st.step === 0){
@@ -2647,7 +2819,7 @@ function onboarding(){
       skip = `<button class="onb-skip" data-ob="login">У меня уже есть аккаунт — войти</button>`;
     } else if (st.step === 1){
       body = `<h2>Как тебя зовут?</h2><p>Буду обращаться по имени.</p>
-        <div class="form"><div class="field"><input id="ob-name" value="${esc(st.name)}" placeholder="Имя" autocomplete="given-name" style="text-align:left"></div></div>
+        <div class="form"><div class="field"><input id="ob-name" value="${esc(st.name)}" placeholder="Имя" autocomplete="off" style="text-align:left"></div></div>
         <div class="seg"><label><input type="radio" name="ob-g" value="f" ${st.gender==='f'?'checked':''}><span>Обращаться «она»</span></label><label><input type="radio" name="ob-g" value="m" ${st.gender==='m'?'checked':''}><span>Обращаться «он»</span></label></div>`;
     } else if (st.step === 2){
       body = `<h2>Чем ты занимаешься?</h2><p>Под это настроятся разделы и подсказки.</p>
@@ -2659,12 +2831,14 @@ function onboarding(){
         </div>
         ${st.profession === 'custom' ? `<div class="form" style="margin-top:4px"><div class="field"><input id="ob-prof" value="${esc(st.profName)}" placeholder="Например, тату-мастер" style="text-align:left"></div></div>` : ''}`;
     } else if (st.step === 3){
+      body = `<h2>Оформление</h2><p>Собери фон под себя. Поменять можно в любой момент: аватарка → «Оформление».</p>${lookPickerHtml(st.look)}`;
+    } else if (st.step === 4){
       body = `<h2>Что внутри</h2><div class="stack" style="gap:10px;text-align:left">${TOUR().map(([k,c,t,d]) => `<div class="row" style="background:var(--glass);border:1px solid var(--edge);border-radius:18px;align-items:flex-start;padding:14px 16px">
         <span class="ic" style="--c:${c}">${ICON_TOUR[k]}</span><div class="rt"><div class="t1">${t}</div><div class="t2" style="white-space:normal">${d}</div></div></div>`).join('')}</div>`;
-    } else if (st.step === 4){
+    } else if (st.step === 5){
       body = `<h2>Твой город</h2><p>Покажу золотой час, закат и погоду на день съёмки.</p><div id="obCity" style="text-align:left"></div>`;
       skip = `<button class="onb-skip" data-ob="skip">Пропустить</button>`;
-    } else if (st.step === 5){
+    } else if (st.step === 6){
       body = st.registered
         ? `<h2>Аккаунт создан ☁️</h2><p>Записи будут храниться в облаке и не потеряются, даже если сменишь телефон.</p>`
         : `<h2>Создай аккаунт</h2><p>Записи будут храниться в облаке — не потеряются, даже если сменишь телефон. И будут приходить напоминания.</p>
@@ -2680,10 +2854,12 @@ function onboarding(){
     }
     el.innerHTML = `<div class="onb-card glass">${dots()}<div class="onb-body">${body}</div><button class="btn primary" data-ob="next">${btn}</button>${skip}</div>`;
     if (st.step === 1){ const n = el.querySelector('#ob-name'); setTimeout(() => n.focus(), 50); n.addEventListener('input', () => { st.name = n.value; }); el.querySelectorAll('input[name="ob-g"]').forEach(r => r.addEventListener('change', () => { st.gender = r.value; applyTheme(r.value); })); }
-    if (st.step === 4) cityPicker(el.querySelector('#obCity'), st.city, c => { st.city = c; });
+    if (st.step === 3) bindLookPicker(el, st.look, () => st.gender);
+    if (st.step === 5) cityPicker(el.querySelector('#obCity'), st.city, c => { st.city = c; });
     const op = el.querySelector('#ob-prof'); if (op){ op.addEventListener('input', () => { st.profName = op.value; }); if (!st.profName) setTimeout(() => op.focus(), 50); }
   };
   const finish = calSrc => {
+    data.settings = {...data.settings, look: {mode: st.look.mode, c: st.look.c}}; data.settingsU = Date.now();
     saveProfile({name:st.name.trim(), gender:st.gender, profession:st.profession, profName:st.profName.trim(), city:st.city});
     el.classList.add('hide'); setTimeout(() => el.remove(), 500);
     render();
@@ -2701,7 +2877,7 @@ function onboarding(){
     if (st.step === 1 && !st.name.trim()){ toast('Напиши, как тебя зовут'); return; }
     if (st.step === 2 && st.profession === 'custom' && !st.profName.trim()){ toast('Напиши, чем ты занимаешься'); el.querySelector('#ob-prof')?.focus(); return; }
     if (b.dataset.ob === 'later'){ st.step++; draw(); return; }
-    if (st.step === 5 && !st.registered){
+    if (st.step === 6 && !st.registered){
       const em = (el.querySelector('#ob-email').value || '').trim().toLowerCase(), pw = el.querySelector('#ob-pass').value || '';
       st.email = em;
       if (!em || pw.length < 6){ toast('Укажи почту и пароль от 6 символов'); return; }
@@ -2710,10 +2886,10 @@ function onboarding(){
         .catch(e => { b.disabled = false; b.textContent = 'Зарегистрироваться'; toast(AUTH_ERR[e && e.code] || (navigator.onLine === false ? 'Нет интернета' : 'Не получилось зарегистрироваться')); });
       return;
     }
-    if (st.step === 6){ finish(); return; }
+    if (st.step === 7){ finish(); return; }
     st.step++;
     // золотой час бьюти не нужен — шаг с городом пропускаем
-    if (st.step === 4 && !PROFS[st.profession].sun){ st.city = null; st.step++; }
+    if (st.step === 5 && !PROFS[st.profession].sun){ st.city = null; st.step++; }
     draw();
   });
   draw();
@@ -3027,7 +3203,7 @@ document.addEventListener('click', ev => {
       if (occ && isRepeat(e0)){ e0.doneOn = {...(e0.doneOn || {})}; if (e0.doneOn[occ]) delete e0.doneOn[occ]; else e0.doneOn[occ] = true; }
       else e0.done = !e0.done;
       touch(e0); persist();
-      const e = occ && isRepeat(e0) ? occOf(e0, occ) : e0;
+      const e = occ && isRepeat(e0) ? occFrom(e0, occ) : e0;
       // в окне «Не закрыто» — обновляем список; в окне переноса («уже сделано») — закрываем
       if ($('#odList')) { overdueList().length ? overdueSheet() : closeSheet(); }
       else if (sheetOpen() && !el.closest('.row')) closeSheet();
@@ -3038,19 +3214,53 @@ document.addEventListener('click', ev => {
       checkAch({retouchZero: zero});
       break;
     }
-    case 'resched': { const e = data.entries.find(x => x.id === id); swapSheet(() => reschedSheet(el.dataset.occ && isRepeat(e) ? occOf(e, el.dataset.occ) : e)); break; }
+    case 'resched': { const e = data.entries.find(x => x.id === id); swapSheet(() => reschedSheet(el.dataset.occ && isRepeat(e) ? occFrom(e, el.dataset.occ) : e)); break; }
     case 'resched-to': moveEntry(id, el.dataset.d, el.dataset.t, el.dataset.occ); break;
     case 'resched-custom': { const d = $('#rs-d').value; if (!d){ toast('Выбери дату'); break; } moveEntry(id, d, $('#rs-t').value, el.dataset.occ); break; }
     case 'del-occ': {
       if (!armDelete(el)) break;
       const e = data.entries.find(x => x.id === id); e.skip = [...(e.skip || []), el.dataset.occ]; touch(e);
-      persist(); closeSheet(); render(); toast('Удалено только ' + dayLabel(el.dataset.occ).toLowerCase()); break;
+      persist(); closeSheet(); render(); toast('Удалено только ' + occDay(el.dataset.occ)); break;
     }
     case 'goal': swapSheet(goalForm); break;
     case 'settings': settingsSheet(); break;
     case 'look': swapSheet(() => lookSheet()); break;
     case 'look-save': { const st = lookSheet.st; data.settings = {...data.settings, look: {mode: st.mode, c: st.c}}; data.settingsU = Date.now(); persist(); closeSheet(); toast('Оформление сохранено'); break; }
     case 'look-reset': { const st = lookSheet.st; st.mode = 'auto'; st.c = []; data.settings = {...data.settings, look: {mode:'auto', c:[]}}; data.settingsU = Date.now(); persist(); closeSheet(); toast('Вернули как было'); break; }
+    case 'sw-pin': case 'sw-mute': {
+      const e = data.entries.find(x => x.id === id); if (!e) break;
+      const k = a === 'sw-pin' ? 'pin' : 'mute'; e[k] = !e[k]; if (!e[k]) delete e[k]; touch(e); persist(); render();
+      toast(a === 'sw-pin' ? (e.pin ? 'Закреплено сверху' : 'Откреплено') : (e.mute ? 'Напоминаний не будет' : 'Напоминания включены')); break;
+    }
+    case 'sw-del': {
+      const i = data.entries.findIndex(x => x.id === id); if (i < 0) break;
+      const e = data.entries[i], occ = el.dataset.occ, before = JSON.stringify(e);
+      if (occ && isRepeat(e)){ e.skip = [...(e.skip || []), occ]; touch(e); }
+      else { data.entries.splice(i, 1); tomb(id); }
+      persist(); render();
+      toast(occ && isRepeat(e) ? 'Удалено только ' + occDay(occ) : 'Удалено', () => {
+        const back = touch(JSON.parse(before)), j = data.entries.findIndex(x => x.id === id);
+        if (j >= 0) data.entries[j] = back; else { data.entries.push(back); delete data.deleted[id]; }
+        persist(); render();
+      }); break;
+    }
+    case 'ava-pick': $('#ava-file').click(); break;
+    case 'ava-del': data.settings = {...data.settings}; delete data.settings.avatar; data.settingsU = Date.now(); persist(); render(); profileSheet(); toast('Фото убрано'); break;
+    case 'cfilter': ui.cfilter = el.value; render(); break;
+    case 'exp-cats': swapSheet(expCatsSheet); break;
+    case 'exp-cat-del': { const l = expCats().slice(); l.splice(+el.dataset.i, 1); setExpCats(l.length ? l : [{k:'other', l:'Другое'}]); break; }
+    case 'exp-cat-add': { const v = ($('#ec-new').value || '').trim(); if (!v){ toast('Напиши название'); break; } setExpCats([...expCats(), {k: 'c' + uid(), l: v}]); break; }
+    case 'exp-cats-reset': { data.settings = {...data.settings}; delete data.settings.expCats; data.settingsU = Date.now(); persist(); expCatsSheet(); toast('Вернули стандартные статьи'); break; }
+    case 'exp-cats-done': swapSheet(() => expenseForm()); break;
+    case 'exp-paid': {
+      const x = data.expenses.find(y => y.id === id); if (!x) break;
+      const flip = () => { x.paid = x.paid === false; touch(x); persist(); render(); };
+      flip(); toast(x.paid ? `«${x.title || expLabel(x)}» — оплачено, вычел из дохода` : 'Снова ожидается', flip); break;
+    }
+    case 'prio-reset':
+      openSheet(`${head('Сбросить приоритеты?')}<p class="hint" style="margin:0 6px 16px">Все отметки 🔥 ⚡ 😴 снимутся со всех записей и дел. Вернуть их можно будет только вручную, в каждой записи.</p>
+        <div class="actions"><button class="btn danger" data-act="prio-reset-yes">Да, сбросить все</button><button class="btn tinted" data-act="close">Отмена</button></div>`); break;
+    case 'prio-reset-yes': data.entries.forEach(e => { if (e.prio){ e.prio = 0; touch(e); } }); persist(); closeSheet(); render(); toast('Приоритеты сброшены'); break;
     case 'open-history': closeSheet(); ui.tab = 'history'; render(); scrollTo({top:0}); break;
     case 'profile': swapSheet(profileSheet); break;
     case 'recap': swapSheet(() => recapSheet(el.dataset.m)); break;
@@ -3088,7 +3298,8 @@ document.addEventListener('click', ev => {
     case 'del-client': {
       if (!armDelete(el)) break;
       const c = clientById(id);
-      data.entries.forEach(e => { if (e.clientId === id){ e.client = c.name; e.clientId = ''; touch(e); } });
+      // имя остаётся в записях строкой, но карточку клиента из него больше не создаём (keepName)
+      data.entries.forEach(e => { if (e.clientId === id){ e.client = c.name; e.clientId = ''; e.keepName = true; touch(e); } });
       data.clients = data.clients.filter(x => x.id !== id); tomb(id);
       persist(); closeSheet(); render(); toast('Клиент удалён, записи остались'); break;
     }
@@ -3102,13 +3313,13 @@ document.addEventListener('keydown', ev => {
 let toastT;
 // toast(msg) — подсказка сверху; toast(msg, undo) — с кнопкой «Отменить» (5 секунд)
 function toast(msg, undo){
-  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  const t = $('#toast'); t.textContent = ''; const sp = document.createElement('span'); sp.className = 'tt'; sp.textContent = msg; t.appendChild(sp); t.classList.add('show');
   if (undo){
     const b = document.createElement('button'); b.className = 'toast-undo'; b.textContent = 'Отменить';
     b.onclick = ev => { ev.stopPropagation(); clearTimeout(toastT); t.classList.remove('show'); undo(); };
     t.appendChild(b);
   }
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), undo ? 5000 : 2200);
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), undo ? 7000 : 2200);
 }
 
 /* ---------- заставка с фразой ---------- */
@@ -3126,7 +3337,7 @@ let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) hiddenAt = Date.now();
   else {
-    if (hiddenAt && Date.now() - hiddenAt > 30*60*1000){ showSplash(); render(); }
+    if (hiddenAt && Date.now() - hiddenAt > 30*60*1000){ showSplash(); render(); setTimeout(askOverdue, 3300); }
     syncNow();
   }
 });
