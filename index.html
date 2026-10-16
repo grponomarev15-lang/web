@@ -255,6 +255,9 @@ a{color:inherit;text-decoration:none}
 .pill.part{color:var(--teal);background:color-mix(in srgb,var(--teal) 15%,transparent)}
 .pill.sub{color:var(--indigo);background:color-mix(in srgb,var(--indigo) 15%,transparent)}
 .pill.late{color:var(--red);background:color-mix(in srgb,var(--red) 14%,transparent)}
+/* светлая тема: цветной текст на бледной плашке читался плохо — темнее */
+@media (prefers-color-scheme: light){:root:not([data-g="m"]):not([data-mode="dark"]):not([data-mode="black"]) .pill.wait{color:#9a4a00}:root:not([data-g="m"]):not([data-mode="dark"]):not([data-mode="black"]) .pill.part{color:#06606e}:root:not([data-g="m"]):not([data-mode="dark"]):not([data-mode="black"]) .pill.late{color:#b3261e}}
+:root[data-mode="light"] .pill.wait{color:#9a4a00}:root[data-mode="light"] .pill.part{color:#06606e}:root[data-mode="light"] .pill.late{color:#b3261e}
 .check{width:28px;height:28px;border-radius:50%;border:2px solid var(--fg3);display:grid;place-items:center;flex:none}
 .check svg{width:16px;height:16px;opacity:0}
 .check.on{background:var(--green);border-color:var(--green);color:#fff}
@@ -946,11 +949,13 @@ const DEFAULT_TEMPLATES = [
   {id:'tpl-thanks', name:'Спасибо за съёмку', text:'{имя}, спасибо за съёмку! Было очень приятно работать. Фото будут готовы в течение 10 дней.'}
 ];
 function blank(){ return {entries:[], expenses:[], clients:[], subs:[], packages:[], templates:DEFAULT_TEMPLATES.map(t => ({...t})), profile:null, profileU:0, goal:0, goalU:0, settings:{rem:{...DEFAULT_REM}}, settingsU:0, deleted:{}, lastBackup:null, ach:{}}; }
+// только нормальные записи: битая (null, без id) выкидывается по одной, а не обнуляет всю базу
+const okRecs = a => Array.isArray(a) ? a.filter(r => r && typeof r === 'object' && r.id) : [];
 function normalize(d){
   const out = blank();
-  if (!d || !Array.isArray(d.entries)) return out;
-  Object.assign(out, {entries:d.entries, expenses:d.expenses||[], clients:d.clients||[], subs:d.subs||[], goal:+d.goal||0, goalU:d.goalU||0,
-    packages:d.packages||[], templates:Array.isArray(d.templates) ? d.templates : out.templates, profile:d.profile||null, profileU:d.profileU||0,
+  if (!d || typeof d !== 'object' || !Array.isArray(d.entries)) return out;
+  Object.assign(out, {entries:okRecs(d.entries), expenses:okRecs(d.expenses), clients:okRecs(d.clients).filter(c => typeof c.name === 'string'), subs:okRecs(d.subs), goal:+d.goal||0, goalU:d.goalU||0,
+    packages:okRecs(d.packages), templates:Array.isArray(d.templates) ? d.templates : out.templates, profile:d.profile||null, profileU:d.profileU||0,
     settings:{...out.settings, ...(d.settings||{}), rem:{...DEFAULT_REM, ...((d.settings||{}).rem||{})}}, settingsU:d.settingsU||0,
     deleted:d.deleted||{}, lastBackup:d.lastBackup||null, ach:d.ach||{}});
   // старые записи: имя клиента строкой -> карточка клиента
@@ -966,11 +971,23 @@ function normalize(d){
 // отметка времени изменения — по ней телефоны договариваются, чья версия новее
 function touch(r){ r.u = Date.now(); return r; }
 function tomb(id){ data.deleted[id] = Date.now(); }
-function load(){ try { return normalize(JSON.parse(localStorage.getItem(KEY))); } catch(e) { return blank(); } }
+function load(){
+  let raw = null;
+  try { raw = localStorage.getItem(KEY); return normalize(JSON.parse(raw)); }
+  catch(e) {
+    // не смогли прочитать — сохраняем как есть рядом, чтобы ничего не потерять, и начинаем с пустой базы (облако вернёт записи)
+    try { if (raw) localStorage.setItem(KEY + '.broken', raw); } catch(e2) {}
+    return blank();
+  }
+}
 let data = load();
 function persist(fromSync){
-  try { localStorage.setItem(KEY, JSON.stringify(data)); }
-  catch(e) { toast('Не получилось сохранить: на телефоне мало места'); }
+  try { localStorage.setItem(KEY, JSON.stringify(data)); persist.failAt = 0; }
+  catch(e) {
+    // ошибку не перебьёт следующий весёлый тост — см. toast()
+    persist.failAt = Date.now();
+    toast(session ? '⚠️ На телефоне кончилось место — изменения сохраню только в облако. Освободи память' : '⚠️ Не сохранилось: на телефоне кончилось место. Освободи память или включи облако', null, true);
+  }
   if (!fromSync) scheduleSync();
 }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
@@ -1028,7 +1045,22 @@ function payState(x){
   return {cls:'wait', text:'Ждёт оплаты', due:sum};
 }
 
+// подсказки в полях — под профессию
+const PH = {
+  photo: {place:'Парк, студия, адрес', note:'Локация, образы, пожелания…', exp:'Например, аренда вспышки на 3 часа', cnote:'Любимые локации, дети, дни рождения…', expSub:'Аренда техники, студия, софт…'},
+  video: {place:'Локация, студия, адрес', note:'Сценарий, локации, пожелания…', exp:'Например, аренда стабилизатора на день', cnote:'Любимая музыка, пожелания, дни рождения…', expSub:'Аренда техники, студия, софт…'},
+  beauty:{place:'Кабинет, салон или на дому', note:'Услуга, пожелания, аллергии…', exp:'Например, гель-лаки и расходники', cnote:'Любимые оттенки, аллергии, дни рождения…', expSub:'Материалы, аренда места, инструменты…'},
+  custom:{place:'Адрес или онлайн', note:'Детали, пожелания…', exp:'Например, материалы для заказа', cnote:'Предпочтения, дни рождения…', expSub:'Материалы, аренда, транспорт…'}};
+const ph = k => (PH[(data.profile && data.profile.profession) || 'photo'] || PH.photo)[k];
 /* ---------- статистика ---------- */
+// неоплаченное по записям и абонементам ДО начала месяца ym (долги прошлых месяцев)
+function debtsBefore(ym){
+  const from = ym + '-01', out = [];
+  for (const e of data.entries){ const p = payState(e); if (e.date && e.date < from && p && p.due > 0 && !e.subId) out.push(e); }
+  for (const x of data.subs){ const p = payState(x); if (x.date && x.date < from && p && p.due > 0) out.push(x); }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+const dueOf = x => (payState(x) || {}).due || 0;
 // Деньги считаются по дню, когда они пришли: задаток — когда его внесли (prepaidAt), остаток — когда отметили «оплачено» (paidAt).
 // У старых записей без этих дат: задаток — день создания записи, остаток — день съёмки (если он уже прошёл).
 const isoDay = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
@@ -1044,7 +1076,7 @@ function payments(x){
 // отметки дат оплаты при сохранении: old — как было, rec — как стало
 function stampPay(rec, old = {}){
   const t = today();
-  if (+rec.prepaid > 0) rec.prepaidAt = +old.prepaid === +rec.prepaid && old.prepaidAt ? old.prepaidAt : t; else delete rec.prepaidAt;
+  if (+rec.prepaid > 0) rec.prepaidAt = +old.prepaid > 0 && old.prepaidAt ? old.prepaidAt : t; else delete rec.prepaidAt;
   if (rec.paid) rec.paidAt = old.paid && old.paidAt ? old.paidAt : t; else delete rec.paidAt;
   return rec;
 }
@@ -1159,7 +1191,7 @@ function render(){
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === ui.tab));
   if (ui.tab === 'history') drawChart();
   if (ui.tab === 'plan') bindSwipe($('#cal'));
-  if (ui.tab === 'clients'){ const si = $('#q'); si.addEventListener('input', () => { ui.q = si.value; $('#clientList').innerHTML = clientListHtml(); }); }
+  if (ui.tab === 'clients' && $('#q')){ const si = $('#q'); si.addEventListener('input', () => { ui.q = si.value; $('#clientList').innerHTML = clientListHtml(); }); }
 }
 
 // иконки, которые можно поставить записи вместо стандартной
@@ -1399,7 +1431,8 @@ function renderHome(){
     <button class="card glass stat" data-act="${data.goal ? 'tab' : 'goal'}" data-tab="money"><div class="label">Цель на ${MONTHS[+ym.slice(5)-1]}</div>
       <b>${pct === null ? 'Задать' : pct + '%'}</b><span>${pct === null ? 'сколько хочешь заработать' : data.goal > earned ? 'ещё ' + rub(data.goal - earned) : 'цель выполнена 🎉'}</span>
       ${pct === null ? '' : `<div class="bar" style="margin:10px 0 0;height:6px"><i style="width:${Math.min(100, pct)}%;background:var(--grad-warm)"></i></div>`}</button>
-    <button class="card glass stat" data-act="tab" data-tab="money"><div class="label">Ждёт оплаты</div><b>${s.unpaid ? shortRub(s.unpaid) : '0'}</b><span>${s.unpaid ? rub(s.unpaid) : 'все оплатили 👌'}</span></button>
+    ${(() => { const old = debtsBefore(today().slice(0,7)).reduce((a, x) => a + dueOf(x), 0), all = s.unpaid + old;
+      return `<button class="card glass stat" data-act="tab" data-tab="money"><div class="label">Ждёт оплаты</div><b>${all ? shortRub(all) : '0'}</b><span>${!all ? 'все оплатили 👌' : old ? 'из них долги ' + shortRub(old) : rub(all)}</span></button>`; })()}
   </div>`;
 
   // сегодня
@@ -1666,7 +1699,7 @@ function clientForm(c, prefillName){
         <div class="field"><label for="c-phone">Телефон</label><input id="c-phone" name="phone" type="tel" inputmode="tel" value="${esc(c.phone)}" placeholder="+7 900 000-00-00"></div>
         <div class="field"><label for="c-insta">Instagram</label><input id="c-insta" name="insta" value="${esc(c.insta)}" placeholder="@username" autocapitalize="off"></div>
       </div>
-      <div class="form"><div class="field col"><label for="c-note">Заметка</label><textarea id="c-note" name="note" rows="3" placeholder="Любимые локации, дети, дни рождения…">${esc(c.note)}</textarea></div></div>
+      <div class="form"><div class="field col"><label for="c-note">Заметка</label><textarea id="c-note" name="note" rows="3" placeholder="${ph('cnote')}">${esc(c.note)}</textarea></div></div>
       <div class="actions">
         <button type="submit" class="btn primary">${isNew ? 'Добавить' : 'Сохранить'}</button>
         ${isNew ? '' : `<button type="button" class="btn danger" data-act="del-client" data-id="${c.id}">Удалить клиента</button>`}
@@ -1752,6 +1785,13 @@ function renderMoney(){
       <div><div class="l">Расходы</div><b>${rub(s.expT)}</b><small>${s.expPlan ? `предстоит <i>−${rub(s.expPlan)}</i>` : 'нет предстоящих'}</small></div>
     </div></div>`;
 
+  // долги прошлых месяцев — видны в текущем месяце, чтобы не потерялись
+  const debts = ui.month === today().slice(0,7) ? debtsBefore(ui.month) : [];
+  if (debts.length){
+    const sum = debts.reduce((a, x) => a + dueOf(x), 0);
+    h += `<div class="section-title">Долги прошлых месяцев · ${rub(sum)}</div><div class="section-note">Записи прошлых месяцев, по которым так и не доплатили.</div>
+      <div class="list glass">${debts.map(x => x.total ? `<div class="row" data-act="edit-sub" data-id="${x.id}" role="button" tabindex="0"><span class="ic" style="--c:var(--indigo)">${ICONS.sub}</span><div class="rt"><div class="t1">${esc(subTitle(x))}</div><div class="t2">${shortDate(x.date)} · ${esc(clientName(x))}</div></div><div class="rr"><div class="amt">${rub(dueOf(x))}</div><button class="pill wait" data-act="paid-sub" data-id="${x.id}">Ждёт оплаты</button></div></div>` : entryRow(x, {showDate:true})).join('')}</div>`;
+  }
   if (s.unpaid){
     const list = data.entries.filter(e => e.date && e.date.slice(0,7) === ui.month && (payState(e)||{}).due > 0);
     const subs = data.subs.filter(x => x.date && x.date.slice(0,7) === ui.month && (payState(x)||{}).due > 0);
@@ -1930,7 +1970,7 @@ function entryForm(e, preset = {}){
       <div class="form">
         <div class="field col"><label for="f-title">Название</label><input id="f-title" name="title" value="${esc(e.title||'')}" placeholder="${esc(TYPES[e.type].ph)}" enterkeyhint="next"></div>
         <div class="field" id="clientField" ${e.type==='task'?'hidden':''}><label for="f-client" id="l-client">${e.type==='lesson'?prof().student:'Клиент'}</label><input id="f-client" name="client" list="clientsList" value="${esc(cn)}" placeholder="Имя">${datalist()}</div>
-        <div class="field"><label for="f-place">Место</label><input id="f-place" name="place" value="${esc(e.place||'')}" placeholder="Парк, студия, адрес"></div>
+        <div class="field"><label for="f-place">Место</label><input id="f-place" name="place" value="${esc(e.place||'')}" placeholder="${ph('place')}"></div>
       </div>
       <div class="seg" id="formatSeg" ${e.type==='lesson'?'':'hidden'}>
         <label><input type="radio" name="f-format" value="meet" ${e.format!=='call'?'checked':''}><span>Встреча</span></label>
@@ -1970,7 +2010,7 @@ function entryForm(e, preset = {}){
       <div class="form" id="doneBox" ${checkable(e)?'':'hidden'}>
         <div class="field"><label for="f-done" style="width:auto" id="l-done">${e.type==='task'?'Сделано':prof().post.done}</label><input type="checkbox" class="sw" id="f-done" name="done" ${e.done?'checked':''}></div>
       </div>
-      <div class="form"><div class="field col"><label for="f-note">Заметка</label><textarea id="f-note" name="note" rows="2" placeholder="${e.type==='task'?'С кем, что взять с собой…':'Локация, образы, пожелания…'}">${esc(e.note||'')}</textarea></div></div>
+      <div class="form"><div class="field col"><label for="f-note">Заметка</label><textarea id="f-note" name="note" rows="2" placeholder="${e.type==='task'?'С кем, что взять с собой…':ph('note')}">${esc(e.note||'')}</textarea></div></div>
       <p class="warn" id="clashWarn" hidden></p>
       <div class="stick"><button type="submit" class="btn primary" style="width:100%">${isNew ? 'Добавить' : 'Сохранить'}</button></div>
       <div class="actions">
@@ -2047,7 +2087,7 @@ function entryForm(e, preset = {}){
     $('#l-date').textContent = t === 'retouch' ? 'Сдать до' : 'Дата';
     $('#l-client').textContent = t === 'lesson' ? prof().student : 'Клиент';
     $('#clientField').hidden = t === 'task';
-    $('#f-note').placeholder = t === 'task' ? 'С кем, что взять с собой…' : 'Локация, образы, пожелания…';
+    $('#f-note').placeholder = t === 'task' ? 'С кем, что взять с собой…' : ph('note');
     $('#f-title').placeholder = TYPES[t].ph;
     syncSubs(); syncPkgs(); syncSun();
   });
@@ -2061,6 +2101,7 @@ function entryForm(e, preset = {}){
     // у «дела» нет денег и клиента
     const amount = subId || type === 'task' ? 0 : parseAmount(fd.get('amount'));
     const prepaidRaw = subId ? 0 : parseAmount(fd.get('prepaid')), prepaid = Math.min(prepaidRaw, amount);
+    if (prepaidRaw > 0 && !amount && type !== 'task'){ toast('Укажи сумму — без неё задаток не сохранится'); $('#f-amount') && $('#f-amount').focus(); return; }
     const cid = type === 'task' ? '' : ensureClient(fd.get('client'));
     const rec = {
       id: e.id || uid(), type,
@@ -2118,7 +2159,7 @@ function expenseForm(x){
       <div class="form">
         <div class="field"><label for="e-amount">Сумма, ₽</label><input id="e-amount" name="amount" inputmode="decimal" value="${x.amount||''}" placeholder="0" required></div>
         <div class="field"><label for="e-date">Дата</label><input type="date" id="e-date" name="date" value="${esc(x.date)}" required></div>
-        <div class="field col"><label for="e-title">Описание</label><input id="e-title" name="title" value="${esc(x.title||'')}" placeholder="Например, аренда вспышки на 3 часа"></div>
+        <div class="field col"><label for="e-title">Описание</label><input id="e-title" name="title" value="${esc(x.title||'')}" placeholder="${ph('exp')}"></div>
       </div>
       <div class="actions">
         <button type="submit" class="btn primary">${isNew ? 'Добавить' : 'Сохранить'}</button>
@@ -2172,7 +2213,7 @@ function addItems(sec){
   return [
     it('client', 'new-client', '', 'var(--green)', ICONS.client, 'Клиент', 'Имя, телефон, Instagram'),
     it('sub', 'new-sub', '', 'var(--indigo)', ICONS.sub, 'Абонемент', 'Пакет занятий для ' + (prof().student === 'Ученица' ? 'ученицы' : 'ученика')),
-    it('exp', 'add-exp', '', 'var(--gray)', ICONS.expense, 'Расход', 'Аренда техники, студия, софт…')];
+    it('exp', 'add-exp', '', 'var(--gray)', ICONS.expense, 'Расход', ph('expSub'))];
 }
 function addChooser(sec){
   sec = sec || addChooser.last || 'work'; addChooser.last = sec;
@@ -2290,18 +2331,60 @@ function merge(a, b){
 }
 
 const sync = {state:'off', at:null, timer:null, busy:false, again:false};
+// чей аккаунт синхронизирован с этим телефоном (только локально, в облако не уходит)
+const getOwner = () => { try { return localStorage.getItem('kadr.owner') || ''; } catch(e) { return ''; } };
+const setOwner = uid => { try { uid ? localStorage.setItem('kadr.owner', uid) : localStorage.removeItem('kadr.owner'); } catch(e) {} };
+const hasLocalData = () => !!(data.entries.length || data.clients.length || data.subs.length || data.expenses.length);
+// перед входом: если на телефоне записи не из этого аккаунта — спрашиваем, а не сливаем молча (общий телефон)
+function askLocalData(uid){
+  return new Promise(resolve => {
+    if (!hasLocalData() || getOwner() === uid){ try { localStorage.removeItem('kadr.askLocal'); } catch(e) {} return resolve('keep'); }
+    try { localStorage.setItem('kadr.askLocal', uid); } catch(e) {}
+    const done = v => { try { localStorage.removeItem('kadr.askLocal'); } catch(e) {} if (v === 'drop'){ data = blank(); persist(true); } setOwner(uid); closeSheet(); resolve(v); };
+    const n = data.entries.length, c = data.clients.length;
+    openSheet(`${head('Что сделать с записями на телефоне?')}
+      <p class="hint" style="margin:0 6px 16px">На этом телефоне уже есть ${n} ${plural(n,'запись','записи','записей')} и ${c} ${plural(c,'клиент','клиента','клиентов')}, которые не связаны с этим аккаунтом.
+      Если это твои записи — перенеси их в аккаунт. Если телефон чужой или это чужие записи — убери их с телефона, в аккаунт они не попадут.</p>
+      <div class="actions"><button class="btn primary" id="ldMove">Перенести в мой аккаунт</button><button class="btn tinted" id="ldDrop">Убрать с телефона</button></div>`);
+    $('#ldMove').onclick = () => done('keep');
+    $('#ldDrop').onclick = () => done('drop');
+  });
+}
+// выход: сначала досылаем изменения в облако, потом очищаем телефон — следующий человек ничего не увидит
+async function logOut(force){
+  if (!force){ sync.state = 'busy'; if (navigator.onLine !== false) await syncNow(); }
+  if (!force && sync.state !== 'ok'){
+    openSheet(`${head('Не получилось сохранить в облако')}
+      <p class="hint" style="margin:0 6px 16px">Последние изменения ещё не в облаке (нет интернета?). Если выйти сейчас, они пропадут с этого телефона.</p>
+      <div class="actions"><button class="btn tinted" data-act="close">Остаться и попробовать позже</button><button class="btn danger" data-act="logout-force">Всё равно выйти</button></div>`);
+    return;
+  }
+  const tok = session && session.access_token;
+  if (tok) fetch(SB_URL + '/auth/v1/logout', {method:'POST', headers:{apikey:SB_KEY, Authorization:'Bearer ' + tok}}).catch(() => {});
+  dropSession(); setOwner(''); sync.state = 'off';
+  data = blank(); persist(true);
+  try { localStorage.removeItem('kadr.tab'); } catch(e) {}
+  closeSheet(); ui.tab = 'home'; render();
+  setTimeout(onboarding, 350);
+  toast('Ты вышел из аккаунта. Данные — в облаке');
+}
 function scheduleSync(){ if (!session) return; clearTimeout(sync.timer); sync.timer = setTimeout(syncNow, 1500); }
 async function syncNow(){
   if (!session) return;
+  // вошли, но ещё не ответили «перенести или убрать» — в облако ничего не шлём, пока не ответят
+  let ask = ''; try { ask = localStorage.getItem('kadr.askLocal') || ''; } catch(e) {}
+  if (ask === session.uid){ if (!sheetOpen()) askLocalData(session.uid).then(() => syncNow()); return; }
   if (sync.busy){ sync.again = true; return; }
   sync.busy = true;
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  if (tz && data.settings.tz !== tz){ data.settings = {...data.settings, tz}; data.settingsU = Date.now(); }
   try {
     const rows = await rest('GET', 'user_data?select=data&user_id=eq.' + encodeURIComponent(session.uid)); // RLS и так отдаёт только свои — это страховка
     const remote = rows && rows[0] ? rows[0].data : null;
     const before = JSON.stringify(data);
     if (remote && Array.isArray(remote.entries)) data = normalize(merge(data, normalize(remote)));
+    // часовой пояс (для напоминаний) — уже поверх облачных настроек, чтобы не перетереть их пустыми настройками нового телефона
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && data.settings.tz !== tz){ data.settings = {...data.settings, tz}; data.settingsU = Math.max(Date.now(), (data.settingsU || 0) + 1); }
+    setOwner(session.uid);
     const changed = JSON.stringify(data) !== before;
     persist(true);
     if (!remote || JSON.stringify(normalize(remote)) !== JSON.stringify(data))
@@ -2470,6 +2553,8 @@ function settingsSheet(){
       const email = $('#l-email').value.trim().toLowerCase(), pw = $('#l-pass').value;
       if (up) await signUp(email, pw); else await logIn(email, pw);
       const res = up ? 'new' : 'in';
+      // новый аккаунт — записи на телефоне точно этого человека; вход в существующий — спрашиваем
+      if (up) setOwner(session.uid); else await askLocalData(session.uid);
       sync.state = 'busy'; await syncNow();
       toast(res === 'new' ? 'Аккаунт создан, данные в облаке ☁️' : 'Готово, данные синхронизированы ☁️');
       // пришёл из знакомства «уже есть аккаунт»: если профиля в облаке нет — доводим знакомство
@@ -2804,7 +2889,7 @@ function profileSheet(){
       <div class="seg"><label><input type="radio" name="pf-g" value="f" ${p.gender!=='m'?'checked':''}><span>Обращаться «она»</span></label><label><input type="radio" name="pf-g" value="m" ${p.gender==='m'?'checked':''}><span>Обращаться «он»</span></label></div>
       <div class="cats" id="pfProf">${Object.entries(PROFS).map(([k, pr]) => `<label><input type="radio" name="pf-p" value="${k}" ${(p.profession || 'photo') === k ? 'checked' : ''}><span>${pr.name}</span></label>`).join('')}</div>
       <div class="form" id="pfProfNameBox" ${p.profession === 'custom' ? '' : 'hidden'}><div class="field"><label for="pf-profname">Профессия</label><input id="pf-profname" value="${esc(p.profName||'')}" placeholder="Например, тату-мастер"></div></div>
-      <p class="hint">Город нужен для золотого часа и погоды.</p>
+      <p class="hint">${prof().sun ? 'Город нужен для золотого часа и погоды.' : 'Город нужен для погоды в день записи.'}</p>
       <div id="pfCity"></div>
       <button class="btn primary" type="submit" style="margin-top:14px">Сохранить</button>
     </form>`);
@@ -2910,7 +2995,7 @@ function onboarding(){
       st.email = em;
       if (!em || pw.length < 6){ toast('Укажи почту и пароль от 6 символов'); return; }
       b.disabled = true; b.textContent = 'Регистрирую…';
-      signUp(em, pw).then(() => { st.registered = true; st.step++; draw(); toast('Аккаунт создан ☁️'); })
+      signUp(em, pw).then(() => { setOwner(session.uid); st.registered = true; st.step++; draw(); toast('Аккаунт создан ☁️'); })
         .catch(e => { b.disabled = false; b.textContent = 'Зарегистрироваться'; toast(AUTH_ERR[e && e.code] || (navigator.onLine === false ? 'Нет интернета' : 'Не получилось зарегистрироваться')); });
       return;
     }
@@ -3112,7 +3197,7 @@ function feedbackSheet(){
   openSheet(`${head('Сообщить о проблеме')}
     <form id="fbForm" autocomplete="off">
       <div class="seg"><label><input type="radio" name="fb-k" value="bug" checked><span>Ошибка</span></label><label><input type="radio" name="fb-k" value="idea"><span>Идея</span></label><label><input type="radio" name="fb-k" value="ux"><span>Неудобно</span></label></div>
-      <div class="form"><div class="field col"><label for="fb-text">Что случилось?</label><textarea id="fb-text" rows="5" maxlength="4000" placeholder="Например: создаю абонемент, нажимаю «Сохранить», а он не появляется"></textarea></div></div>
+      <div class="form"><div class="field col"><label for="fb-text">Что случилось?</label><textarea id="fb-text" rows="5" maxlength="2000" placeholder="Например: создаю абонемент, нажимаю «Сохранить», а он не появляется"></textarea></div></div>
       <button class="btn primary" type="submit">Отправить</button>
     </form>
     <p class="hint" style="margin:14px 6px 0">Вместе с сообщением отправится модель телефона и версия приложения — это помогает найти ошибку. Записи и клиенты не отправляются.</p>
@@ -3138,7 +3223,9 @@ function feedbackSheet(){
 
 /* ---------- копия данных ---------- */
 async function exportData(){
-  const json = JSON.stringify({app:'kadr', version:2, exportedAt:new Date().toISOString(), entries:data.entries, expenses:data.expenses, clients:data.clients, subs:data.subs, goal:data.goal, ach:data.ach}, null, 2);
+  // всё, кроме служебного: записи, клиенты, абонементы, расходы, прайс, шаблоны, профиль, настройки, цель
+  const {deleted, lastBackup, ...all} = data;
+  const json = JSON.stringify({app:'kadr', version:3, exportedAt:new Date().toISOString(), ...all}, null, 2);
   const name = `Фикус-копия-${today()}.json`;
   const file = new File([json], name, {type:'application/json'});
   const done = () => { data.lastBackup = Date.now(); persist(); toast('Копия сохранена'); closeSheet(); };
@@ -3155,10 +3242,20 @@ $('#importFile').addEventListener('change', async ev => {
     const d = JSON.parse(await f.text());
     if (!d || !Array.isArray(d.entries)) throw 0;
     openSheet(`${head('Восстановить?')}
-      <p class="hint" style="margin:0 6px 16px">В копии ${d.entries.length} записей, ${(d.clients||[]).length} клиентов и ${(d.expenses||[]).length} расходов. Текущие данные на телефоне заменятся данными из копии.</p>
+      <p class="hint" style="margin:0 6px 16px">В копии ${d.entries.length} ${plural(d.entries.length,'запись','записи','записей')}, ${(d.clients||[]).length} ${plural((d.clients||[]).length,'клиент','клиента','клиентов')} и ${(d.expenses||[]).length} ${plural((d.expenses||[]).length,'расход','расхода','расходов')}${d.exportedAt ? ' от ' + new Date(d.exportedAt).toLocaleDateString('ru-RU',{day:'numeric',month:'long'}) : ''}. Текущие данные заменятся данными из копии.
+      ${session ? '<br><br><b>Облако включено:</b> всё, чего нет в копии (в том числе записи, сделанные на других телефонах после этой даты), удалится и в облаке.' : ''}</p>
       <div class="actions"><button class="btn primary" id="doImport">Заменить данные</button><button class="btn tinted" data-act="close">Отмена</button></div>`);
     $('#doImport').onclick = () => {
-      data = normalize(d); data.lastBackup = Date.now();
+      const old = data, now = Date.now(), nd = normalize(d);
+      if (!Array.isArray(d.packages)) nd.packages = old.packages;
+      if (!Array.isArray(d.templates)) nd.templates = old.templates;
+      // копия должна «победить» облако: её записи — свежее, остальное — удалено
+      for (const c of COLS) nd[c].forEach(r => { r.u = now; });
+      const keep = new Set(COLS.flatMap(c => nd[c].map(r => r.id)));
+      nd.deleted = {...old.deleted}; COLS.forEach(c => old[c].forEach(r => { if (!keep.has(r.id)) nd.deleted[r.id] = now; }));
+      if (!d.profile){ nd.profile = old.profile; } nd.profileU = now; nd.settingsU = now; nd.goalU = now;
+      if (!d.settings) nd.settings = old.settings;
+      data = nd; data.lastBackup = now;
       persist(); checkAch({silent:true}); closeSheet(); render(); toast('Данные восстановлены');
     };
   } catch(e){ toast('Это не похоже на копию «Фикуса»'); }
@@ -3312,7 +3409,8 @@ document.addEventListener('click', ev => {
     case 'cal-import': swapSheet(() => calImportSheet(null)); break;
     case 'cal-src': swapSheet(() => calImportSheet(el.dataset.s)); break;
     case 'sync-now': syncNow().then(() => toast(sync.state === 'ok' ? 'Синхронизировано' : 'Не получилось, проверь интернет')); break;
-    case 'logout': if (!armDelete(el, 'Точно выйти?')) break; dropSession(); sync.state = 'off'; closeSheet(); toast('Выход выполнен. Данные остались на телефоне'); break;
+    case 'logout': if (!armDelete(el, 'Точно выйти?')) break; el.textContent = 'Сохраняю в облако…'; logOut(); break;
+    case 'logout-force': logOut(true); break;
     case 'push-on': enablePush(el); break;
     case 'push-test': testPush(); break;
     case 'export': exportData(); break;
@@ -3346,14 +3444,15 @@ document.addEventListener('keydown', ev => {
 
 let toastT;
 // toast(msg) — подсказка сверху; toast(msg, undo) — с кнопкой «Отменить» (5 секунд)
-function toast(msg, undo){
+function toast(msg, undo, important){
+  if (!important && persist.failAt && Date.now() - persist.failAt < 4000) return; // не затираем ошибку сохранения
   const t = $('#toast'); t.textContent = ''; const sp = document.createElement('span'); sp.className = 'tt'; sp.textContent = msg; t.appendChild(sp); t.classList.toggle('undo', !!undo); t.classList.add('show');
   if (undo){
     const b = document.createElement('button'); b.className = 'toast-undo'; b.textContent = 'Отменить';
     b.onclick = ev => { ev.stopPropagation(); clearTimeout(toastT); t.classList.remove('show'); undo(); };
     t.appendChild(b);
   }
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), undo ? 7000 : 2200);
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), undo ? 7000 : important ? 6000 : 2200);
 }
 
 /* ---------- заставка с фразой ---------- */
