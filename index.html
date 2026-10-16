@@ -276,6 +276,13 @@ a{color:inherit;text-decoration:none}
 .money.neg{color:var(--red)}
 .mini{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--fg2)}
 .mini b{display:block;color:var(--fg);font:600 17px var(--rounded);font-variant-numeric:tabular-nums}
+/* «Получено / Расходы» во всю ширину карточки, под каждым — что ещё впереди */
+.money2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-top:16px;padding-top:14px;border-top:1px solid var(--sep)}
+.money2>div{min-width:0;padding-right:12px}.money2>div+div{padding:0 0 0 14px;border-left:1px solid var(--sep)}
+.money2 .l{font-size:13px;color:var(--fg2)}
+.money2 b{display:block;font:600 clamp(16px,5vw,20px) var(--rounded);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0 4px}
+.money2 small{display:block;font-size:13px;color:var(--fg2);line-height:1.3}
+.money2 small i{font-style:normal;font-variant-numeric:tabular-nums;color:var(--fg);white-space:nowrap}
 .ring{width:108px;height:108px;flex:none;position:relative;display:grid;place-items:center}
 .ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
 .ring .pct{font:700 20px var(--rounded);text-align:center;line-height:1.05}
@@ -1733,10 +1740,13 @@ function renderMoney(){
   h += `<div class="card glass"><div class="hero">
       <div class="k"><div class="label">Чистыми за ${monthTitle(ui.month)}</div>
         <div class="money ${s.net<0?'neg':''}">${rub(s.net)}</div>
-        <div class="mini"><div>Получено<b>${rub(s.incT)}</b></div><div>Расходы<b>${rub(s.expT)}</b></div>${s.unpaid ? `<div>Ожидается<b>${rub(s.unpaid)}</b></div>` : ''}</div>
       </div>
       <button class="ring" data-act="goal" aria-label="Цель на месяц">${ringSvg(pct)}
         <span class="pct">${data.goal ? Math.round(pct*100)+'%' : '🎯'}<small>${data.goal ? 'от цели' : 'цель'}</small></span></button>
+    </div>
+    <div class="money2">
+      <div><div class="l">Получено</div><b>${rub(s.incT)}</b><small>${s.unpaid ? `ожидается <i>+${rub(s.unpaid)}</i>` : 'всё получено'}</small></div>
+      <div><div class="l">Расходы</div><b>${rub(s.expT)}</b><small>${s.expPlan ? `предстоит <i>−${rub(s.expPlan)}</i>` : 'нет предстоящих'}</small></div>
     </div></div>`;
 
   if (s.unpaid){
