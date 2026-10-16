@@ -124,11 +124,13 @@ try{var d=JSON.parse(localStorage.getItem('kadr.v1'));if(d&&d.profile&&d.profile
 /* свайп строки, как в Telegram: влево — действия, вправо — сделано */
 .row.swipe{transition:transform .25s cubic-bezier(.2,.9,.25,1)}
 .row.dragging{transition:none}
-.swacts{position:absolute;top:0;bottom:0;left:100%;display:flex;width:216px}
-.swacts button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:#fff}
-.swacts button span{font-size:20px}
-.swacts .s-pin{background:var(--orange)}.swacts .s-mute{background:var(--indigo)}.swacts .s-del{background:var(--red)}
-.swdone{position:absolute;top:0;bottom:0;right:100%;width:120px;display:flex;align-items:center;justify-content:flex-end;padding-right:18px;background:var(--green);color:#fff;font-weight:700}
+.swacts{position:absolute;top:0;bottom:0;left:100%;width:216px;display:flex;align-items:center;justify-content:space-around;padding:0 6px}
+.swacts button{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--fg2)}
+.swacts i,.swdone i{display:grid;place-items:center;width:58px;height:38px;border-radius:19px;color:#fff}
+.swacts svg,.swdone svg{width:21px;height:21px}
+.swacts .s-pin i{background:var(--indigo)}.swacts .s-mute i{background:var(--orange)}.swacts .s-del i{background:var(--red)}
+.swdone{position:absolute;top:0;bottom:0;right:100%;width:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:500;color:var(--fg2)}
+.swdone i{background:var(--green)}
 .swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:16px;margin-bottom:12px}
 .swatch{position:relative;aspect-ratio:1;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);transition:transform .2s}
 .swatch.on{transform:scale(.88);box-shadow:0 0 0 3px var(--base),0 0 0 5px var(--fg)}
@@ -750,6 +752,10 @@ const postOn = () => !prof().hide.includes('retouch');
 const prof = () => PROFS[(data.profile && data.profile.profession) || 'photo'] || PROFS.photo;
 const S = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 const ICONS = {
+  pin:`<svg viewBox="0 0 24 24" ${S}><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3z"/><path d="M12 14v6"/></svg>`,
+  bellOff:`<svg viewBox="0 0 24 24" ${S}><path d="M10.3 20a2 2 0 0 0 3.4 0"/><path d="M6.5 9.5V9a5.5 5.5 0 0 1 9.6-3.6"/><path d="M17.5 10v3.5l1.5 2.5H5l1.5-2.5V12"/><path d="M4 4l16 16"/></svg>`,
+  bell:`<svg viewBox="0 0 24 24" ${S}><path d="M10.3 20a2 2 0 0 0 3.4 0"/><path d="M6.5 13.5V9a5.5 5.5 0 0 1 11 0v4.5L19 16H5z"/></svg>`,
+  trash:`<svg viewBox="0 0 24 24" ${S}><path d="M4 7h16"/><path d="M9 7V4.5h6V7"/><path d="M6.5 7l1 13h9l1-13"/><path d="M10 11v5.5M14 11v5.5"/></svg>`,
   shoot:`<svg viewBox="0 0 24 24" ${S}><path d="M4 8.5h3l1.8-2.5h6.4L17 8.5h3V19H4z"/><circle cx="12" cy="13.3" r="3.3"/></svg>`,
   retouch:`<svg viewBox="0 0 24 24" ${S}><path d="M4.5 19.5l10-10M13 6l1-2.5L15 6l2.5 1-2.5 1-1 2.5L13 8l-2.5-1zM19 12.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z"/></svg>`,
   lesson:`<svg viewBox="0 0 24 24" ${S}><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.9-3.8 3.7-6 7-6s6.1 2.2 7 6"/></svg>`,
@@ -1290,10 +1296,10 @@ document.addEventListener('change', ev => {
     if (r.querySelector('.swacts')) return;
     const {e} = entryOf(r); if (!e) return;
     r.insertAdjacentHTML('beforeend', `<div class="swacts">
-      <button class="s-pin" data-act="sw-pin" data-id="${e.id}"><span>📌</span>${e.pin ? 'Открепить' : 'Закрепить'}</button>
-      <button class="s-mute" data-act="sw-mute" data-id="${e.id}"><span>${e.mute ? '🔔' : '🔕'}</span>${e.mute ? 'Со звуком' : 'Без звука'}</button>
-      <button class="s-del" data-act="sw-del" data-id="${e.id}"${r.dataset.occ ? ` data-occ="${r.dataset.occ}"` : ''}><span>🗑</span>Удалить</button></div>`
-      + (checkable(entryOf(r).o) ? `<div class="swdone">${entryOf(r).o.done ? 'Вернуть' : 'Сделано ✓'}</div>` : ''));
+      <button class="s-pin" data-act="sw-pin" data-id="${e.id}"><i>${ICONS.pin}</i>${e.pin ? 'Открепить' : 'Закрепить'}</button>
+      <button class="s-mute" data-act="sw-mute" data-id="${e.id}"><i>${e.mute ? ICONS.bell : ICONS.bellOff}</i>${e.mute ? 'Вернуть звук' : 'Убрать звук'}</button>
+      <button class="s-del" data-act="sw-del" data-id="${e.id}"${r.dataset.occ ? ` data-occ="${r.dataset.occ}"` : ''}><i>${ICONS.trash}</i>Удалить</button></div>`
+      + (checkable(entryOf(r).o) ? `<div class="swdone"><i>${ICONS.tick}</i>${entryOf(r).o.done ? 'Вернуть' : 'Сделано'}</div>` : ''));
   }
 })();
 // поле заметки растёт вместе с текстом, но не выше 40% экрана — дальше прокрутка внутри
@@ -1328,7 +1334,7 @@ function calNav(k){
   render();
 }
 // список записей: сначала блоки приоритетов (только те уровни, что выставлены), ниже — всё остальное как обычно
-const prioResetBtn = () => data.entries.some(e => e.prio) ? `<button class="linkbtn" data-act="prio-reset">Сбросить все приоритеты</button>` : '';
+const prioResetBtn = () => data.entries.some(e => e.prio) ? `<button class="linkbtn" style="margin:0 0 0 auto;padding:4px 2px;font-size:14px;letter-spacing:0;text-transform:none;color:var(--accent)" data-act="prio-reset">Сбросить приоритеты</button>` : '';
 function prioList(list, opts = {}){
   list = [...list.filter(e => e.pin), ...list.filter(e => !e.pin)]; // закреплённое — сверху
   const rows = l => `<div class="list glass">${l.map(e => entryRow(e, opts)).join('')}</div>`;
@@ -1383,8 +1389,8 @@ function renderHome(){
 
   // сегодня
   const todayList = (byDate()[t] || []).filter(e => !od.some(o => o.id === e.id && o.date === e.date));
-  h += `<div class="section-title">Сегодня</div>`;
-  h += todayList.length ? prioList(todayList) + prioResetBtn()
+  h += `<div class="section-title" style="display:flex;align-items:baseline">Сегодня${todayList.length ? prioResetBtn() : ''}</div>`;
+  h += todayList.length ? prioList(todayList)
     : `<button class="card glass empty" data-act="new-on" data-d="${t}" style="padding:18px;width:100%"><b style="font-size:16px">Сегодня свободно</b><p>Нажми, чтобы что-то запланировать</p></button>`;
 
   // ближайшее — следующие 5 записей после сегодня
@@ -1538,7 +1544,7 @@ function calMonth(map){
   const list = map[ui.selDate] || [];
   const sum = list.reduce((a,e) => a + (+e.amount||0), 0);
   h += `<div class="day ${ui.selDate===t?'today':''}"><span>${dayLabel(ui.selDate)}</span><span class="num">${sum?rub(sum):''}</span></div>`;
-  h += list.length ? prioList(list) + prioResetBtn()
+  h += list.length ? prioResetBtn() + prioList(list)
     : `<button class="card glass empty" data-act="new-on" data-d="${ui.selDate}" style="padding:20px;width:100%"><b style="font-size:16px">Свободный день</b><p>Нажми, чтобы добавить запись</p></button>`;
   return h;
 }
