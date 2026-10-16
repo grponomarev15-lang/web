@@ -148,7 +148,10 @@ a{color:inherit;text-decoration:none}
 
 /* живой фон, чтобы стеклу было что преломлять */
 .bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--base)}
-.app{position:relative;z-index:1}
+/* iPhone (с экрана «Домой»): на короткой странице фон не доходил до низа — снизу чёрная полоса.
+   Фон — на всю «большую» высоту экрана, а страница всегда не короче экрана */
+@supports (height:100lvh){.bg{bottom:auto;height:calc(100lvh + env(safe-area-inset-bottom,0px))}}
+.app{position:relative;z-index:1;min-height:100vh;min-height:100lvh}
 .bg i{position:absolute;border-radius:50%;filter:blur(60px);opacity:.85;animation:drift 22s ease-in-out infinite alternate}
 .bg i:nth-child(1){width:70vmax;height:70vmax;background:var(--blob1);left:-25vmax;top:-20vmax}
 .bg i:nth-child(2){width:60vmax;height:60vmax;background:var(--blob2);right:-25vmax;top:25vh;animation-duration:28s}
