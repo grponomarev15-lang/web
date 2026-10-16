@@ -1335,15 +1335,20 @@ function calNav(k){
 }
 // список записей: сначала блоки приоритетов (только те уровни, что выставлены), ниже — всё остальное как обычно
 const prioResetBtn = () => data.entries.some(e => e.prio) ? `<button class="linkbtn" style="margin:0 0 0 auto;padding:4px 2px;font-size:14px;letter-spacing:0;text-transform:none;color:var(--accent)" data-act="prio-reset">Сбросить приоритеты</button>` : '';
+// список дня: 📌 закреплённое (выше всего) → 🔥⚡😴 приоритеты → остальное → ✓ выполненное (внизу)
 function prioList(list, opts = {}){
-  list = [...list.filter(e => e.pin), ...list.filter(e => !e.pin)]; // закреплённое — сверху
-  const rows = l => `<div class="list glass">${l.map(e => entryRow(e, opts)).join('')}</div>`;
-  const groups = [3, 2, 1].map(p => [p, list.filter(e => e.prio === p)]).filter(([, l]) => l.length);
-  if (!groups.length) return rows(list);
-  const rest = list.filter(e => !PRIO[e.prio]);
-  const rowsP = l => `<div class="list glass">${l.map(e => entryRow(e, {...opts, inPrio:true})).join('')}</div>`;
-  return groups.map(([p, l]) => `<div class="prio-h" style="--pc:${PRIO[p].color}">${PRIO[p].emoji} ${PRIO[p].name}</div>${rowsP(l)}`).join('')
-    + (rest.length ? `<div class="prio-h" style="--pc:var(--fg2)">Остальное</div>${rows(rest)}` : '');
+  const isDone = e => checkable(e) && e.done;
+  const pinned = list.filter(e => e.pin && !isDone(e)), done = list.filter(isDone), live = list.filter(e => !e.pin && !isDone(e));
+  const rows = (l, o = opts) => `<div class="list glass">${l.map(e => entryRow(e, o)).join('')}</div>`;
+  const head = (color, text) => `<div class="prio-h" style="--pc:${color}">${text}</div>`;
+  const groups = [3, 2, 1].map(p => [p, live.filter(e => e.prio === p)]).filter(([, l]) => l.length);
+  const rest = live.filter(e => !PRIO[e.prio]);
+  if (!pinned.length && !groups.length && !done.length) return rows(list);
+  let h = pinned.length ? head('var(--indigo)', '📌 Закреплено') + rows(pinned) : '';
+  h += groups.map(([p, l]) => head(PRIO[p].color, PRIO[p].emoji + ' ' + PRIO[p].name) + rows(l, {...opts, inPrio:true})).join('');
+  if (rest.length) h += (h ? head('var(--fg2)', 'Остальное') : '') + rows(rest);
+  if (done.length) h += head('var(--green)', '✓ Выполнено · ' + done.length) + rows(done);
+  return h;
 }
 function evChip(e){
   const t = TYPES[e.type] || TYPES.other, pr = PRIO[e.prio];
@@ -3217,7 +3222,8 @@ document.addEventListener('click', ev => {
       // в окне «Не закрыто» — обновляем список; в окне переноса («уже сделано») — закрываем
       if ($('#odList')) { overdueList().length ? overdueSheet() : closeSheet(); }
       else if (sheetOpen() && !el.closest('.row')) closeSheet();
-      render();
+      if (el.closest('#app .list')){ el.classList.toggle('on', !!e.done); const r = el.closest('.row'); r.style.transition = 'opacity .25s'; r.style.opacity = '.4'; setTimeout(render, 280); }
+      else render();
       if (e.type === 'task'){ toast(e.done ? 'Дело сделано ✓' : 'Дело снова в планах'); break; }
       const zero = e.done && !data.entries.some(x => x.type === 'retouch' && !x.done);
       if (!zero) toast(e.done ? prof().post.done + '. Так держать!' : prof().post.back);
