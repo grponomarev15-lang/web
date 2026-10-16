@@ -2473,12 +2473,20 @@ async function fn(action, body = {}, auth = false){
   return j;
 }
 // kind: 'login' — войти/создать аккаунт; 'link' — привязать Telegram к уже вошедшему аккаунту. Возвращает результат опроса.
-function tgAuth(kind){
+// ожидание входа переживает перезагрузку (переход в Telegram и обратно может перезапустить приложение)
+const TG_PENDING = 'kadr.tgPending';
+const tgPending = v => { try { v ? localStorage.setItem(TG_PENDING, JSON.stringify(v)) : localStorage.removeItem(TG_PENDING); } catch(e) {} };
+function tgAuth(kind, resume){
   return new Promise(async (resolve, reject) => {
-    let start;
-    try { start = await fn('tg-start', {kind}, kind === 'link'); }
-    catch(e){ toast(navigator.onLine === false ? 'Нет интернета' : 'Telegram сейчас недоступен, попробуй позже'); return reject(e); }
-    window.open(start.url, '_blank');
+    let start = resume;
+    if (!start){
+      try { start = await fn('tg-start', {kind}, kind === 'link'); }
+      catch(e){ toast(navigator.onLine === false ? 'Нет интернета' : 'Telegram сейчас недоступен, попробуй позже'); return reject(e); }
+      tgPending({nonce: start.nonce, url: start.url, kind, t: Date.now()});
+      window.open(start.url, '_blank');
+    }
+    const done = (fnc, v) => { tgPending(null); fnc(v); };
+    resolve = done.bind(null, resolve); reject = done.bind(null, reject);
     openSheet(`${head(kind === 'link' ? 'Привязка Telegram' : 'Вход через Telegram')}
       <div style="text-align:center;padding:6px 6px 14px"><div style="width:64px;height:64px;margin:4px auto 12px;border-radius:50%;background:#2aabee;color:#fff;display:grid;place-items:center">${TG_ICON.replace('<svg', '<svg width="34" height="34"')}</div>
       <p class="hint" style="margin:0 0 6px;text-align:left">1. Нажми синюю кнопку «Открыть Telegram» — откроется наш бот <b>@ficuss_bot</b>.<br>2. Внизу чата нажми <b>«Запустить»</b> (или «Start»).<br>3. Бот ответит «✅ Вход подтверждён» — возвращайся сюда, вход произойдёт сам.</p></div>
@@ -2502,16 +2510,24 @@ function tgAuth(kind){
   });
 }
 // вход через Telegram из меню или знакомства; onDone(isNew) — что делать после
-async function tgLogin(onDone){
-  let r; try { r = await tgAuth('login'); } catch(e){ return; }
+async function tgLogin(onDone, resume){
+  let r; try { r = await tgAuth('login', resume); } catch(e){ return; }
   saveSession({...r.session, tg: r.username});
   if (r.isNew) setOwner(session.uid); else await askLocalData(session.uid);
   closeSheet();
   sync.state = 'busy'; await syncNow();
   toast(r.isNew ? 'Аккаунт создан ☁️ Данные будут в облаке' : 'Ты в аккаунте ☁️');
+  const onb = document.querySelector('.onb');
   if (onDone) onDone(r.isNew);
+  else if (onb){ if (data.profile){ onb.classList.add('hide'); setTimeout(() => onb.remove(), 500); applyTheme(data.profile.gender); render(); } } // знакомство уже открыто — продолжится само
   else if (!data.profile) setTimeout(onboarding, 350);
   else { applyTheme(data.profile.gender); render(); }
+}
+// при запуске: если ждали подтверждения из Telegram — продолжаем ждать (или сразу входим, если уже подтвердили)
+function resumeTg(){
+  let p = null; try { p = JSON.parse(localStorage.getItem(TG_PENDING)); } catch(e) {}
+  if (!p || !p.nonce || Date.now() - p.t > 15 * 60e3){ tgPending(null); return; }
+  if (p.kind === 'link') tgLink(p); else tgLogin(null, p);
 }
 // отдельное окно «Вход»: Telegram сверху, почта ниже. onDone(isNew) — что делать после входа (знакомство передаёт своё)
 function loginSheet(onDone){
@@ -2543,8 +2559,8 @@ function loginSheet(onDone){
     }
   });
 }
-async function tgLink(){
-  let r; try { r = await tgAuth('link'); } catch(e){ return; }
+async function tgLink(resume){
+  let r; try { r = await tgAuth('link', resume); } catch(e){ return; }
   if (session) { session.tg = r.username; try { localStorage.setItem('kadr.session', JSON.stringify(session)); } catch(e) {} }
   closeSheet(); toast('Telegram привязан ✓ Теперь можно входить без пароля'); settingsSheet();
 }
@@ -3694,6 +3710,7 @@ render();
 // первый запуск — знакомство вместо заставки
 if (checkRecovery()) $('#splash').hidden = true;
 else if (!data.profile){ $('#splash').hidden = true; onboarding(); } else { showSplash(); setTimeout(askOverdue, 3300); }
+setTimeout(resumeTg, 600);
 syncNow();
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
