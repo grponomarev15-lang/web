@@ -617,7 +617,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.12.1', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.13', tg:'gog_sonn'};
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
@@ -946,7 +946,7 @@ function phrase(i){
 
 /* ---------- данные (хранятся на телефоне) ---------- */
 const KEY = 'kadr.v1';
-const DEFAULT_REM = {eve:true, hour:20, h2:true, retouch:true};
+const DEFAULT_REM = {eve:true, hour:20, h2:true, retouch:true, tg:true};
 // стартовые шаблоны сообщений; {имя} {дата} {время} {место} {сумма} {предоплата} {остаток} заполняются из записи
 const DEFAULT_TEMPLATES = [
   {id:'tpl-confirm', name:'Подтверждение съёмки', text:'{имя}, привет! Подтверждаю нашу съёмку {дата} в {время}{место}. Предоплата {предоплата}, остаток {остаток} в день съёмки. До встречи!'},
@@ -2680,6 +2680,7 @@ function settingsSheet(){
     <form class="form" id="remForm">
       <div class="field"><label for="r-eve" style="width:auto">Накануне вечером</label><select id="r-eve-h" name="hour" style="flex:none;width:auto;color:var(--fg2)" ${r.eve?'':'disabled'}>${hours}</select><input type="checkbox" class="sw" id="r-eve" name="eve" ${r.eve?'checked':''}></div>
       <div class="field"><label for="r-h2" style="width:auto">За 2 часа до ${prof().unit.genOne}</label><input type="checkbox" class="sw" id="r-h2" name="h2" ${r.h2?'checked':''}></div>
+      ${isTgAccount() || session.tg ? `<div class="field"><label for="r-tg" style="width:auto">Дублировать в Telegram</label><input type="checkbox" class="sw" id="r-tg" name="tg" ${r.tg !== false ? 'checked' : ''}></div>` : ''}
       ${postOn() ? `<div class="field"><label for="r-ret" style="width:auto">Сроки ${prof().post.gen}</label><input type="checkbox" class="sw" id="r-ret" name="retouch" ${r.retouch?'checked':''}></div>` : ''}
     </form>
     <div id="pushBox" style="margin-bottom:22px"></div>`
@@ -2732,7 +2733,7 @@ function settingsSheet(){
   refreshCloudUi();
   const rf = $('#remForm');
   if (rf) rf.addEventListener('change', () => {
-    data.settings = {...data.settings, rem:{eve:$('#r-eve').checked, hour:+$('#r-eve-h').value, h2:$('#r-h2').checked, retouch:$('#r-ret') ? $('#r-ret').checked : r.retouch}};
+    data.settings = {...data.settings, rem:{eve:$('#r-eve').checked, hour:+$('#r-eve-h').value, h2:$('#r-h2').checked, retouch:$('#r-ret') ? $('#r-ret').checked : r.retouch, tg:$('#r-tg') ? $('#r-tg').checked : r.tg !== false}};
     data.settingsU = Date.now(); $('#r-eve-h').disabled = !$('#r-eve').checked;
     persist(); toast('Сохранено');
   });
