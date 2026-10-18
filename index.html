@@ -615,7 +615,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.11', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.12', tg:'gog_sonn'};
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
@@ -2427,6 +2427,16 @@ async function syncNow(){
     const remote = rows && rows[0] ? rows[0].data : null;
     const before = JSON.stringify(data);
     if (remote && Array.isArray(remote.entries)) data = normalize(merge(data, normalize(remote)));
+    // записи из Telegram-бота: «входящие» — на случай, если облако успели перезаписать с другого телефона
+    let inbox = [];
+    try { inbox = await rest('GET', 'tg_inbox?select=id,payload&order=id') || []; } catch(e) {}
+    for (const {payload: p} of inbox){
+      for (const [col, r] of [['entries', p && p.entry], ['clients', p && p.client]]){
+        if (!r || !r.id || (data.deleted || {})[r.id]) continue;
+        const i = data[col].findIndex(x => x.id === r.id);
+        if (i < 0) data[col].push(r); else if ((r.u || 0) > (data[col][i].u || 0)) data[col][i] = r;
+      }
+    }
     // часовой пояс (для напоминаний) — уже поверх облачных настроек, чтобы не перетереть их пустыми настройками нового телефона
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (tz && data.settings.tz !== tz){ data.settings = {...data.settings, tz}; data.settingsU = Math.max(Date.now(), (data.settingsU || 0) + 1); }
@@ -2435,6 +2445,8 @@ async function syncNow(){
     persist(true);
     if (!remote || JSON.stringify(normalize(remote)) !== JSON.stringify(data))
       await rest('POST', 'user_data?on_conflict=user_id', {user_id:session.uid, data, updated_at:new Date().toISOString()}, 'resolution=merge-duplicates,return=minimal');
+    // забранное из «входящих» уже в облаке — убираем
+    if (inbox.length) await rest('DELETE', 'tg_inbox?id=in.(' + inbox.map(x => +x.id).join(',') + ')').catch(() => {});
     sync.state = 'ok'; sync.at = Date.now();
     if (changed){ render(); checkAch({silent:true}); }
   } catch(e){
