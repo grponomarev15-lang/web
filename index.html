@@ -203,8 +203,14 @@ a{color:inherit;text-decoration:none}
 /* фраза дня */
 /* подробная аналитика */
 .ana-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;font:600 17px var(--rounded)}
-.ana-tabs span{font-size:13px;padding-left:2px;padding-right:2px}
 #ana{min-height:70vh} /* шторка не прыгает по высоте при смене раздела */
+/* блоки внутри — с ровным интервалом, как на вкладке «Деньги» (иначе заголовки и кнопки липнут к карточкам) */
+#anaBody{display:flex;flex-direction:column;gap:14px}
+#anaBody > *{margin-bottom:0 !important}
+#anaBody > .section-title{margin:10px 4px -4px !important}
+#anaBody > .hint{margin-top:-4px !important}
+#ana > .actions{margin-top:22px}
+.ana-tabs span{font-size:12.5px !important;padding-left:0 !important;padding-right:0 !important;letter-spacing:-.01em}
 .lim,.mb{height:6px;border-radius:3px;background:var(--edge);overflow:hidden;margin-top:6px}
 .mb{height:5px;margin-top:4px}
 .lim i,.mb i{display:block;height:100%;border-radius:3px;background:var(--accent)}
@@ -631,7 +637,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.17.0', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.17.1', tg:'gog_sonn'};
 // открыто внутри Telegram (мини-апп): Telegram передаёт подпись в #tgWebAppData; запоминаем на сессию — перезагрузка не теряет
 const IN_TG = (() => {
   const hit = /tgWebAppData=/.test(location.hash) || /[?&]tg=1/.test(location.search);
@@ -2358,7 +2364,9 @@ function anaBody(){
   if (ana.view === 'months'){
     const y = ana.ym.slice(0, 4), rows = []; let ti = 0, to = 0;
     const last = y === today().slice(0, 4) ? +today().slice(5, 7) : 12; // будущие месяцы не показываем
-    for (let m = 1; m <= last; m++){ const ym = y + '-' + pad(m), o = moneyOps(ym + '-01', ym + '-31'), i = o.filter(x => x.kind === 'in').reduce((s, x) => s + x.a, 0), e = o.filter(x => x.kind === 'out').reduce((s, x) => s + x.a, 0); ti += i; to += e; rows.push({ym, i, e}); }
+    // пустые месяцы в начале года не показываем — список начинается с первого месяца, где были деньги
+    let first = 1; while (first < last && !moneyOps(y + '-' + pad(first) + '-01', y + '-' + pad(first) + '-31').length) first++;
+    for (let m = first; m <= last; m++){ const ym = y + '-' + pad(m), o = moneyOps(ym + '-01', ym + '-31'), i = o.filter(x => x.kind === 'in').reduce((s, x) => s + x.a, 0), e = o.filter(x => x.kind === 'out').reduce((s, x) => s + x.a, 0); ti += i; to += e; rows.push({ym, i, e}); }
     const max = Math.max(1, ...rows.map(r => Math.max(r.i, r.e)));
     h += `<div class="ana-nav"><button class="circle" data-act="ana-per" data-k="-12" aria-label="Прошлый год">${ICONS.left}</button><b>${y} год</b><button class="circle" data-act="ana-per" data-k="12" aria-label="Следующий год">${ICONS.right}</button></div>
       <p class="hint" style="margin:0 6px 10px">Сколько денег пришло и ушло каждый месяц (по дню оплаты).</p><div class="list glass">${rows.map(r => `<div class="row" data-act="ana-month" data-m="${r.ym}" role="button" tabindex="0">
