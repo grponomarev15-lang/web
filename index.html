@@ -218,6 +218,7 @@ a{color:inherit;text-decoration:none}
 .mb i.in{background:var(--green)} .mb i.out{background:var(--orange)}
 .amt.pos{color:var(--green)}
 .phrase{display:flex;gap:12px;align-items:center;text-align:left;width:100%}
+#app .list .row[data-act="edit"]{-webkit-user-select:none;user-select:none} /* свайп мышкой не выделяет текст */
 .phrase .spark{width:38px;height:38px;border-radius:12px;flex:none;display:grid;place-items:center;color:var(--on-grad);background:var(--grad)}
 .phrase .spark svg{width:20px;height:20px}
 .phrase p{margin:0;font-weight:600;font-size:17px;line-height:1.3}
@@ -637,7 +638,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.17.1', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.17.2', tg:'gog_sonn'};
 // открыто внутри Telegram (мини-апп): Telegram передаёт подпись в #tgWebAppData; запоминаем на сессию — перезагрузка не теряет
 const IN_TG = (() => {
   const hit = /tgWebAppData=/.test(location.hash) || /[?&]tg=1/.test(location.search);
@@ -927,6 +928,10 @@ function applyTheme(gender, look){
   const mode = root.dataset.mode, base = mode ? getComputedStyle(root).getPropertyValue('--base').trim() : null;
   document.querySelectorAll('meta[name="theme-color"]').forEach((el, i) => el.setAttribute('content', base || (m ? '#07090a' : (i === 0 ? '#f4f1f7' : '#0b0a10'))));
   if (IN_TG) tgAppColors(); // шапка Telegram — того же цвета
+  // иконка под тему: iPhone берёт её в момент «На экран „Домой“»
+  const ati = document.querySelector('link[rel="apple-touch-icon"]'), fav = document.querySelector('link[rel="icon"]');
+  if (ati) ati.href = m ? 'apple-touch-icon-m.png' : 'apple-touch-icon.png';
+  if (fav) fav.href = m ? 'icon-m-192.png' : 'icon-192.png';
 }
 const lookPreview = () => `<div class="lp" aria-hidden="true"><i></i><i></i><i></i><div class="lp-in">
   <div class="lp-h"><b>Главная</b><span></span></div><div class="lp-row"><div class="lp-c"></div><div class="lp-c"></div></div>
@@ -1016,6 +1021,7 @@ function load(){
 }
 let data = load();
 function persist(fromSync){
+  persist.n = (persist.n || 0) + 1; // счётчик изменений — по нему сбрасывается кэш статистики клиентов
   try { localStorage.setItem(KEY, JSON.stringify(data)); persist.failAt = 0; }
   catch(e) {
     // ошибку не перебьёт следующий весёлый тост — см. toast()
@@ -1038,7 +1044,17 @@ function bindSwipe(el){
     const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) calNav(dx < 0 ? 1 : -1);
   }, {passive:true});
+  // на компьютере — то же мышкой: зажал и потянул
+  let mx = null, my = 0;
+  el.addEventListener('mousedown', e => { if (e.button === 0){ mx = e.clientX; my = e.clientY; } });
+  el.addEventListener('mouseup', e => {
+    if (mx === null) return;
+    const dx = e.clientX - mx, dy = e.clientY - my; mx = null;
+    if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 1.5){ calNav(dx < 0 ? 1 : -1); bindSwipe.swallow = Date.now(); }
+  });
 }
+// после перетаскивания мышкой отпускание не считается нажатием на день
+document.addEventListener('click', ev => { if (Date.now() - (bindSwipe.swallow || 0) < 300){ ev.stopPropagation(); ev.preventDefault(); } }, true);
 
 /* ---------- клиенты и абонементы ---------- */
 const clientById = id => data.clients.find(c => c.id === id);
@@ -1053,10 +1069,20 @@ const subById = id => data.subs.find(s => s.id === id);
 const subLessons = sub => data.entries.filter(e => e.subId === sub.id).sort((a,b) => (a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
 const subLeft = sub => sub.total - subLessons(sub).length;
 const subTitle = sub => sub.title || 'Абонемент';
+const statCache = {data: null, n: -1, day: '', idx: null, st: new Map()};
 function clientStats(id){
-  const es = data.entries.filter(e => e.clientId === id);
-  const subs = data.subs.filter(s => s.clientId === id);
   const t = today();
+  if (statCache.data !== data || statCache.n !== persist.n || statCache.day !== t){
+    const idx = new Map(), get = k => idx.get(k) || (idx.set(k, {es: [], subs: []}), idx.get(k));
+    for (const e of data.entries) if (e.clientId) get(e.clientId).es.push(e);
+    for (const x of data.subs) if (x.clientId) get(x.clientId).subs.push(x);
+    Object.assign(statCache, {data, n: persist.n, day: t, idx, st: new Map()});
+  }
+  if (statCache.st.has(id)) return statCache.st.get(id);
+  const {es, subs} = statCache.idx.get(id) || {es: [], subs: []};
+  const r = clientStatsOf(es, subs, t); statCache.st.set(id, r); return r;
+}
+function clientStatsOf(es, subs, t){
   const past = es.filter(e => e.date <= t).sort((a,b) => b.date.localeCompare(a.date));
   const future = es.filter(e => e.date > t).sort((a,b) => a.date.localeCompare(b.date));
   return {
@@ -1152,6 +1178,8 @@ function allMonths(){
   const set = new Set();
   data.entries.forEach(e => e.date && set.add(e.date.slice(0,7)));
   data.subs.forEach(s => s.date && set.add(s.date.slice(0,7)));
+  // и месяцы, когда пришли деньги (задаток за прошлый месяц мог прийти без записи в нём) — иначе «рекорд» ложный
+  for (const x of [...data.entries, ...data.subs]) for (const p of payments(x)) set.add(p.d.slice(0,7));
   return [...set].sort();
 }
 
@@ -1355,28 +1383,37 @@ document.addEventListener('change', ev => {
   let row = null, sx = 0, sy = 0, dx = 0, mode = '', open = null, swallow = false;
   const close = r => { if (!r) return; r.style.transform = ''; setTimeout(() => { if (r !== open) r.querySelectorAll('.swacts,.swdone').forEach(n => n.remove()); }, 260); };
   const entryOf = r => { const e = data.entries.find(x => x.id === r.dataset.id); return e && r.dataset.occ && isRepeat(e) ? {e, o: occFrom(e, r.dataset.occ)} : {e, o: e}; };
-  document.addEventListener('touchstart', ev => {
-    const r = ev.target.closest('#app .list .row[data-act="edit"]');
-    if (open && r !== open){ close(open); open = null; }
-    if (!r || ev.touches.length > 1) { row = null; return; }
-    row = r; sx = ev.touches[0].clientX; sy = ev.touches[0].clientY; dx = 0; mode = '';
-  }, {passive:true});
-  document.addEventListener('touchmove', ev => {
-    if (!row) return;
-    const x = ev.touches[0].clientX - sx, y = ev.touches[0].clientY - sy;
-    if (!mode){ if (Math.abs(x) < 10 && Math.abs(y) < 10) return; mode = Math.abs(x) > Math.abs(y) * 1.2 ? 'h' : 'v'; if (mode === 'h') prepare(row); }
-    if (mode !== 'h') return;
+  // палец и мышь — одна логика: start / move / end
+  const start = (target, x, y) => {
+    const r = target.closest('#app .list .row[data-act="edit"]');
+    if (open && r !== open && !target.closest('.swacts')){ close(open); open = null; }
+    if (!r) { row = null; return; }
+    row = r; sx = x; sy = y; dx = 0; mode = '';
+  };
+  const move = (cx, cy) => {
+    if (!row) return false;
+    const x = cx - sx, y = cy - sy;
+    if (!mode){ if (Math.abs(x) < 10 && Math.abs(y) < 10) return false; mode = Math.abs(x) > Math.abs(y) * 1.2 ? 'h' : 'v'; if (mode === 'h') prepare(row); }
+    if (mode !== 'h') return false;
     const base = row === open ? -216 : 0, {o} = entryOf(row);
     dx = Math.max(-240, Math.min(checkable(o) ? 130 : 0, base + x));
     row.classList.add('swipe', 'dragging'); row.style.transform = `translateX(${dx}px)`;
-  }, {passive:true});
-  document.addEventListener('touchend', () => {
+    return true;
+  };
+  document.addEventListener('touchstart', ev => { if (ev.touches.length > 1){ row = null; return; } start(ev.target, ev.touches[0].clientX, ev.touches[0].clientY); }, {passive:true});
+  document.addEventListener('touchmove', ev => { move(ev.touches[0].clientX, ev.touches[0].clientY); }, {passive:true});
+  // мышью на компьютере: зажал строку и потянул влево / вправо
+  document.addEventListener('mousedown', ev => { if (ev.button === 0) start(ev.target, ev.clientX, ev.clientY); });
+  document.addEventListener('mousemove', ev => { if (row && ev.buttons === 1 && move(ev.clientX, ev.clientY)) ev.preventDefault(); });
+  document.addEventListener('mouseup', () => end());
+  document.addEventListener('touchend', () => end());
+  function end(){
     if (!row || mode !== 'h'){ row = null; return; }
     const r = row; row = null; r.classList.remove('dragging'); swallow = true; setTimeout(() => { swallow = false; }, 350);
     if (dx < -70){ r.style.transform = 'translateX(-216px)'; open = r; if (navigator.vibrate) navigator.vibrate(8); return; }
     if (dx > 90){ const b = r.querySelector('[data-act="done"]'); close(r); open = null; if (b) setTimeout(() => b.click(), 120); return; }
     close(r); if (open === r) open = null;
-  });
+  }
   // нажатие после свайпа не должно открывать карточку
   document.addEventListener('click', ev => { if (swallow && !ev.target.closest('.swacts')){ ev.stopPropagation(); ev.preventDefault(); } }, true);
   function prepare(r){
@@ -3149,7 +3186,7 @@ function recapStats(ym){
   return {ym, income:earnedIn(ym), shoots:es.filter(e => e.type === 'shoot').length, lessons:es.filter(e => e.type === 'lesson').length,
     retouch:es.filter(e => e.type === 'retouch').length, clients:new Set(es.map(e => e.clientId).filter(Boolean)).size,
     hours:Math.round(es.filter(e => e.type !== 'retouch' && e.time).reduce((a, e) => a + durOf(e), 0) / 60),
-    record:prev.length >= 1 && s.incT > Math.max(...prev), total:es.length};
+    record:prev.length >= 2 && s.incT > Math.max(...prev), total:es.length}; // рекорд — только если есть с чем сравнить (как в поздравлениях)
 }
 function drawRecap(st, showMoney){
   const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -3527,11 +3564,12 @@ function onboarding(){
 /* ---------- импорт из Google / Apple / Яндекс календаря ---------- */
 const CAL_SOURCES = {
   apple: {name:'Apple Календарь', sub:'iCloud на iPhone', color:'var(--red)', steps:[
-    'Открой приложение «Календарь» и нажми внизу справа значок календаря (сетка из точек) — откроется список «Календари».',
-    'В разделе «iCloud» нажми ⓘ справа от календаря, где твои рабочие записи. Цвет кружка совпадает с цветом записей в календаре.',
-    'Включи «Публичный календарь». Под ним появится «Поделиться ссылкой…» — нажми и выбери «Скопировать». Пока он включён, записи может увидеть любой, у кого есть ссылка, — никому её не отправляй.',
-    'Вернись сюда и вставь ссылку. Записи в нескольких календарях? Нажми «+ Ещё календарь» и добавь ссылку каждого. После переноса обязательно выключи «Публичный календарь» — ссылка перестанет работать.'],
-    note:'Нет раздела «iCloud» или переключателя «Публичный календарь»? Значит, календарь хранится не в iCloud. Если он в разделе «Gmail» — вернись назад и выбери «Google Календарь». Если в разделе «На iPhone» — сначала включи синхронизацию: Настройки → твоё имя → iCloud → Календари (при вопросе выбери «Объединить»), затем повтори шаги.'},
+    'Открой «Календарь» и нажми внизу «Календари».',
+    'Нажми ⓘ у календаря с рабочими записями.',
+    'Включи «Публичный календарь» → «Поделиться ссылкой» → «Скопировать».',
+    'Вставь ссылку сюда. После переноса выключи «Публичный календарь».'],
+    // подробности — только если что-то не так (спрятаны под «Не получается?»)
+    note:'Нет переключателя «Публичный календарь»? Значит, календарь не в iCloud. Если он в разделе «Gmail» — вернись и выбери «Google Календарь». Если в разделе «На iPhone» — включи: Настройки → твоё имя → iCloud → Календари («Объединить») и повтори шаги. Пока публичный календарь включён, записи видит любой, у кого есть ссылка, — никому её не отправляй. Записи в нескольких календарях? Нажми «Ещё календарь» и добавь ссылку каждого.'},
   google: {name:'Google Календарь', sub:'calendar.google.com', color:'var(--indigo)', steps:[
     'Открой calendar.google.com в Safari. Если открылось приложение — нажми «аА» → «Полная версия сайта».',
     '⚙️ Настройки → слева выбери свой календарь → «Интеграция календаря».',
@@ -3571,13 +3609,13 @@ function calImportSheet(src){
   if (!urls.length) urls = [''];
   openSheet(`${head(s.name)}
     <ol class="steps">${s.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>
-    ${s.note ? `<p class="sunline" style="margin:0 0 14px;font-size:13px">${esc(s.note)}</p>` : ''}
+    ${s.note ? `<details class="sunline" style="margin:0 0 14px;font-size:13px"><summary style="cursor:pointer;font-weight:600">Не получается?</summary><p style="margin:8px 0 0">${esc(s.note)}</p></details>` : ''}
     <form id="icsForm" autocomplete="off">
       <div class="form" id="icsList"></div>
       <button type="button" class="btn tinted" id="icsAdd" style="margin-bottom:10px">${ICONS.plus}Ещё календарь</button>
       <button type="submit" class="btn primary" style="margin-bottom:10px">Найти записи</button>
     </form>
-    <p class="hint" style="margin:6px 6px 0">Добавь ссылку на каждый календарь, где есть рабочие записи: «Рабочий», «Calendar» и другие. Ссылки открываются один раз, чтобы прочитать записи. Пароли не нужны.</p>`);
+    <p class="hint" style="margin:6px 6px 0">Ссылка открывается один раз, чтобы прочитать записи. Пароли не нужны.</p>`);
   const list = $('#icsList');
   const read = () => [...list.querySelectorAll('input')].map(i => i.value.trim());
   const drawList = () => {
