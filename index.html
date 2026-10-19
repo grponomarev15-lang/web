@@ -168,7 +168,7 @@ a{color:inherit;text-decoration:none}
 .glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
   background:linear-gradient(160deg,rgba(255,255,255,.35),rgba(255,255,255,0) 38%,rgba(255,255,255,0) 70%,rgba(255,255,255,.12));mix-blend-mode:soft-light}
 
-.app{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px calc(env(safe-area-inset-bottom,0px) + 120px)}
+.app{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 24px) 16px calc(env(safe-area-inset-bottom,0px) + 120px)}
 
 /* шапка */
 .top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-top:6px}
@@ -621,7 +621,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.14.1', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.14.2', tg:'gog_sonn'};
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
