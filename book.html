@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Онлайн-запись</title>
+<meta name="theme-color" content="#f4f1f7">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+/* Онлайн-запись к мастеру «Фикуса»: клиент выбирает услугу, день, время и оставляет контакты.
+   Свободные окна и запись — через функцию push (book-info / book-create). Чужие записи сюда не приходят. */
+:root{--bg:#f4f1f7;--card:#fff;--fg:#1c1b22;--fg2:#6e6a78;--line:#e6e1ec;--accent:#ff375f;--grad:linear-gradient(135deg,#ff6a88,#a855f7);--on:#fff;--ok:#1f9d55;--err:#d93025}
+:root[data-g="m"]{--bg:#0c100d;--card:#161c18;--fg:#f2f6f2;--fg2:#97a39a;--line:#26302a;--accent:#b6ff3c;--grad:linear-gradient(135deg,#b6ff3c,#22d3a6);--on:#0b1405}
+@media (prefers-color-scheme: dark){:root:not([data-g="m"]){--bg:#0f0d14;--card:#1b1822;--fg:#f4f1f8;--fg2:#a49eb0;--line:#2c2836}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px calc(env(safe-area-inset-bottom,0px) + 32px)}
+.who{display:flex;align-items:center;gap:14px;margin:4px 0 22px}
+.ava{width:56px;height:56px;border-radius:50%;background:var(--grad);color:var(--on);display:grid;place-items:center;font-weight:700;font-size:24px;line-height:1;flex:none}
+.who h1{font-size:22px;margin:0;line-height:1.2}
+.who p{margin:2px 0 0;color:var(--fg2);font-size:15px}
+h2{font-size:17px;margin:22px 4px 10px}
+.list{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.svc{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-top:1px solid var(--line)}
+.svc:first-child{border-top:0}
+.svc .n{flex:1;min-width:0}.svc .n b{display:block;font-weight:600}.svc .n small{color:var(--fg2)}
+.svc .p{font-weight:600;white-space:nowrap}
+.svc.on{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.days{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.days::-webkit-scrollbar{display:none}
+.day{flex:none;width:62px;padding:10px 0;border-radius:14px;border:1px solid var(--line);background:var(--card);color:inherit;font:inherit;cursor:pointer;text-align:center}
+.day small{display:block;color:var(--fg2);font-size:12px;text-transform:uppercase}.day b{font-size:19px}
+.day.on{background:var(--grad);color:var(--on);border-color:transparent}.day.on small{color:inherit;opacity:.8}
+.times{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.time{padding:12px 0;border-radius:12px;border:1px solid var(--line);background:var(--card);color:inherit;font-family:inherit;font-weight:600;font-size:16px;cursor:pointer}
+.time.on{background:var(--grad);color:var(--on);border-color:transparent}
+form{display:flex;flex-direction:column;gap:10px}
+label{font-size:13px;color:var(--fg2);margin:0 4px -6px}
+input,textarea{width:100%;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;outline:none}
+input:focus,textarea:focus{border-color:var(--accent)}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.btn{width:100%;padding:16px;border-radius:16px;border:0;background:var(--grad);color:var(--on);font-family:inherit;font-weight:600;font-size:17px;cursor:pointer;margin-top:6px}
+.btn:disabled{opacity:.5}
+.btn.ghost{background:var(--card);color:var(--fg);border:1px solid var(--line)}
+.sum{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;margin-top:18px}
+.sum b{font-weight:600}
+.note{color:var(--fg2);font-size:14px;margin:10px 4px 0}
+.err{color:var(--err);font-size:14px;margin:8px 4px 0;min-height:1em}
+.done{text-align:center;padding:40px 8px}
+.done .big{font-size:56px;margin-bottom:8px}
+.done h1{font-size:24px;margin:0 0 8px}
+.done p{color:var(--fg2);margin:0 0 18px}
+.empty{text-align:center;color:var(--fg2);padding:28px 12px}
+.foot{text-align:center;color:var(--fg2);font-size:12px;margin-top:28px}
+.foot a{color:inherit}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:sp 1s linear infinite;margin:60px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<main id="app"><div class="spin" aria-label="Загрузка"></div></main>
+<script>
+const FN = 'https://rpqkerxuixogvooqjebx.supabase.co/functions/v1/push';
+const slug = (new URLSearchParams(location.search).get('m') || '').toLowerCase();
+const PROF = {photo: 'Фотограф', video: 'Видеограф', beauty: 'Бьюти-мастер'};
+const WD = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'], MON = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const rub = n => new Intl.NumberFormat('ru-RU').format(Math.round(n || 0)) + ' ₽';
+const durTxt = m => m < 60 ? m + ' мин' : m % 60 ? (m / 60).toString().replace('.', ',') + ' ч' : m / 60 + ' ч';
+const dt = ds => { const [y, m, d] = ds.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+const dayLong = ds => { const d = dt(ds); return WD[d.getUTCDay()] + ', ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()]; };
+const st = {info: null, svc: null, day: null, time: null, busy: false};
+
+async function call(action, body = {}){
+  const r = await fetch(FN, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({action, m: slug, ...body})});
+  return r.json().catch(() => ({error: 'net'}));
+}
+async function load(keep){
+  const info = await call('book-info').catch(() => ({error: 'net'}));
+  if (info.error){ $('#app').innerHTML = `<div class="empty"><b>${info.error === 'net' ? 'Нет связи' : 'Онлайн-запись сейчас недоступна'}</b><p>${info.error === 'net' ? 'Проверьте интернет и обновите страницу.' : 'Свяжитесь с мастером напрямую.'}</p></div>`; return; }
+  st.info = info;
+  if (info.gender === 'm') document.documentElement.dataset.g = 'm';
+  document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  document.title = 'Запись' + (info.name ? ' — ' + info.name : '');
+  if (!keep || !info.services.some(s => s.id === (st.svc || {}).id)){ st.svc = info.services.length === 1 ? info.services[0] : null; st.day = st.time = null; }
+  else st.svc = info.services.find(s => s.id === st.svc.id);
+  draw();
+}
+function draw(){
+  const i = st.info, s = st.svc, role = i.prof === 'custom' ? i.profName : PROF[i.prof] || i.profName || '';
+  let h = `<div class="who"><div class="ava">${esc((i.name || 'М').slice(0, 1).toUpperCase())}</div><div><h1>${esc(i.name || 'Мастер')}</h1><p>${esc(role ? role + ' · онлайн-запись' : 'Онлайн-запись')}</p></div></div>`;
+  if (i.services.length > 1 || (i.services[0] && i.services[0].id !== 'any')){
+    h += `<h2>Услуга</h2><div class="list">${i.services.map(x => `<button class="svc ${s && s.id === x.id ? 'on' : ''}" data-svc="${esc(x.id)}"><div class="n"><b>${esc(x.name)}</b><small>${durTxt(x.dur)}</small></div>${x.price ? `<div class="p">${rub(x.price)}</div>` : ''}</button>`).join('')}</div>`;
+  }
+  if (s){
+    if (!s.days.length) h += `<div class="empty">Свободных окон пока нет. Загляните позже или свяжитесь с мастером.</div>`;
+    else {
+      if (!st.day || !s.days.some(d => d.date === st.day)) st.day = s.days[0].date;
+      const day = s.days.find(d => d.date === st.day);
+      h += `<h2>День</h2><div class="days">${s.days.map(d => { const x = dt(d.date); return `<button class="day ${d.date === st.day ? 'on' : ''}" data-day="${d.date}"><small>${WD[x.getUTCDay()]}</small><b>${x.getUTCDate()}</b></button>`; }).join('')}</div>`;
+      h += `<h2>Время · ${dayLong(st.day)}</h2><div class="times">${day.slots.map(t => `<button class="time ${t === st.time ? 'on' : ''}" data-time="${t}">${t}</button>`).join('')}</div>`;
+      if (st.time && !day.slots.includes(st.time)) st.time = null;
+    }
+  }
+  if (s && st.time){
+    h += `<div class="sum"><b>${esc(s.name)}</b><br>${dayLong(st.day)}, ${st.time} · ${durTxt(s.dur)}${s.price ? ' · ' + rub(s.price) : ''}</div>
+      <h2>Ваши контакты</h2><form id="f" autocomplete="on">
+        <label for="n">Имя</label><input id="n" name="name" autocomplete="name" maxlength="60" required placeholder="Как к вам обращаться">
+        <label for="p">Телефон</label><input id="p" name="phone" type="tel" autocomplete="tel" maxlength="20" required placeholder="+7 999 123-45-67">
+        <label for="c">Комментарий</label><textarea id="c" name="comment" rows="2" maxlength="300" placeholder="Необязательно"></textarea>
+        <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <button class="btn" type="submit">Записаться</button><div class="err" id="err"></div>
+        <p class="note">Нажимая «Записаться», вы передаёте имя и телефон мастеру для связи по записи.</p></form>`;
+  }
+  h += `<div class="foot">Работает на «Фикус» · <a href="./" target="_blank" rel="noopener">планер для мастеров</a></div>`;
+  $('#app').innerHTML = h;
+  const f = $('#f'); if (f) f.addEventListener('submit', submit);
+}
+const ERR = {name: 'Напишите имя', phone: 'Проверьте номер телефона', slot: 'Выберите время', taken: 'Это время только что заняли — выберите другое', many: 'У вас уже есть две будущие записи. Чтобы изменить, свяжитесь с мастером', busy: 'Сейчас слишком много записей. Попробуйте через час', off: 'Онлайн-запись сейчас выключена', service: 'Услуга больше недоступна', net: 'Нет связи. Проверьте интернет'};
+async function submit(ev){
+  ev.preventDefault(); if (st.busy) return;
+  const fd = new FormData(ev.target), btn = ev.target.querySelector('.btn');
+  st.busy = true; btn.disabled = true; btn.textContent = 'Записываем…'; $('#err').textContent = '';
+  const r = await call('book-create', {service: st.svc.id, date: st.day, time: st.time, name: fd.get('name'), phone: fd.get('phone'), comment: fd.get('comment'), website: fd.get('website')}).catch(() => ({error: 'net'}));
+  st.busy = false;
+  if (r.ok){ done(r); return; }
+  btn.disabled = false; btn.textContent = 'Записаться'; $('#err').textContent = ERR[r.error] || 'Не получилось записаться. Попробуйте ещё раз';
+  if (r.error === 'taken'){ st.time = null; setTimeout(() => load(true), 1200); }
+}
+function done(r){
+  const s = st.svc, [h, m] = r.time.split(':').map(Number), d = r.date.replace(/-/g, '');
+  const end = h * 60 + m + s.dur, pad = n => String(n).padStart(2, '0');
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fikus//RU', 'BEGIN:VEVENT', 'UID:' + Date.now() + '@chefsales.online',
+    'DTSTART:' + d + 'T' + pad(h) + pad(m) + '00', 'DTEND:' + d + 'T' + pad(Math.floor(end / 60)) + pad(end % 60) + '00',
+    'SUMMARY:' + s.name + (r.master ? ' — ' + r.master : ''), 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  $('#app').innerHTML = `<div class="done"><div class="big">✅</div><h1>Вы записаны</h1>
+    <p><b>${esc(s.name)}</b><br>${dayLong(r.date)}, ${r.time}${r.master ? '<br>Мастер: ' + esc(r.master) : ''}</p>
+    <a class="btn ghost" style="display:block;text-decoration:none" download="zapis.ics" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}">📅 Добавить в календарь</a>
+    <p class="note" style="margin-top:14px">Мастер уже получил уведомление. Если планы изменятся — предупредите его заранее.</p></div>`;
+}
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b || !st.info) return;
+  if (b.dataset.svc){ st.svc = st.info.services.find(x => x.id === b.dataset.svc); st.day = st.time = null; draw(); }
+  else if (b.dataset.day){ st.day = b.dataset.day; st.time = null; draw(); }
+  else if (b.dataset.time){ st.time = b.dataset.time; draw(); setTimeout(() => { const n = $('#n'); if (n) n.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 50); }
+});
+if (!/^[a-z0-9]{6,16}$/.test(slug)) $('#app').innerHTML = '<div class="empty"><b>Ссылка неполная</b><p>Попросите мастера прислать ссылку на запись ещё раз.</p></div>';
+else load();
+</script>
+</body>
+</html>

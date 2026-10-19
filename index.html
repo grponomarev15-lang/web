@@ -638,7 +638,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.17.2', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.18.0', tg:'gog_sonn'};
 // открыто внутри Telegram (мини-апп): Telegram передаёт подпись в #tgWebAppData; запоминаем на сессию — перезагрузка не теряет
 const IN_TG = (() => {
   const hit = /tgWebAppData=/.test(location.hash) || /[?&]tg=1/.test(location.search);
@@ -2724,6 +2724,7 @@ async function syncNow(){
       for (const [col, r] of [['entries', p && p.entry], ['clients', p && p.client], ['expenses', p && p.expense], ['subs', p && p.sub]]){
         if (!r || !r.id || (data.deleted || {})[r.id]) continue;
         const i = data[col].findIndex(x => x.id === r.id);
+        if (i < 0 && col === 'entries' && r.src === 'book') (syncNow.booked = syncNow.booked || []).push(r); // клиент записался по ссылке
         if (i < 0) data[col].push(r); else if ((r.u || 0) > (data[col][i].u || 0)) data[col][i] = r;
       }
     }
@@ -2739,6 +2740,8 @@ async function syncNow(){
     if (inbox.length) await rest('DELETE', 'tg_inbox?id=in.(' + inbox.map(x => +x.id).join(',') + ')').catch(() => {});
     sync.state = 'ok'; sync.at = Date.now();
     if (changed){ render(); checkAch({silent:true}); }
+    if (syncNow.booked && syncNow.booked.length){ const b = syncNow.booked; syncNow.booked = null;
+      toast(b.length === 1 ? `🆕 Онлайн-запись: ${shortDate(b[0].date)}, ${b[0].time} — ${clientName(b[0]) || b[0].title}` : `🆕 Онлайн-записей: ${b.length}`); }
   } catch(e){
     if (session) sync.state = navigator.onLine === false ? 'offline' : 'error';
     console.warn('sync', e);
@@ -3041,6 +3044,7 @@ function settingsSheet(){
       ${menu('profile', ICONS.client, 'var(--pink)', 'Профиль', [p.name, p.profession === 'custom' ? p.profName : '', p.city && p.city.name].filter(Boolean).join(' · ') || 'Имя и город')}
       ${menu('look', ICONS.spark, 'var(--indigo)', 'Оформление', 'Фон и цвета — под себя')}
       ${menu('cal-import', ICONS.cal, 'var(--red)', 'Перенести из календаря', 'Google, Apple или Яндекс')}
+      ${menu('book', ICONS.cal, 'var(--green)', 'Онлайн-запись', bookCfgApp().on ? 'Включена · ссылка для клиентов' : 'Клиенты записываются сами по ссылке')}
       ${menu('pkgs', ICONS.expense, 'var(--orange)', 'Прайс-лист', data.packages.length ? data.packages.length + ' ' + plural(data.packages.length,'услуга','услуги','услуг') : 'Цены подставляются в записи')}
       ${menu('templates', ICONS.chat, 'var(--teal)', 'Шаблоны сообщений', data.templates.length + ' ' + plural(data.templates.length,'шаблон','шаблона','шаблонов'))}
       ${menu('feedback', ICONS.spark, 'var(--indigo)', 'Сообщить о проблеме', 'Ошибка, идея или что-то неудобно')}
@@ -3299,6 +3303,64 @@ function packageForm(p){
     const rec = touch({...p, id:p.id || uid(), type:ev.target.querySelector('input[name="p-type"]:checked').value, name, price:parseAmount($('#p-price').value), dur:+$('#p-dur').value});
     if (isNew) data.packages.push(rec); else data.packages[data.packages.findIndex(x => x.id === p.id)] = rec;
     persist(); toast('Сохранено'); swapSheet(packagesSheet);
+  });
+}
+
+/* ---------- онлайн-запись: клиенты сами выбирают услугу и свободное время по ссылке (book.html) ---------- */
+// настройки — в data.settings.book (синхронизируются в облако; окна считает сервер по календарю — чужие записи клиент не видит)
+const BOOK_DEF = {on: false, days: [1, 2, 3, 4, 5, 6], from: '10:00', to: '20:00', step: 30, notice: 180, horizon: 30, dur: 60};
+const bookCfgApp = () => ({...BOOK_DEF, ...((data.settings || {}).book || {})});
+const bookUrl = c => location.origin + location.pathname.replace(/[^/]*$/, '') + 'book.html?m=' + c.slug;
+function setBook(p){
+  data.settings = {...data.settings, book: {...bookCfgApp(), ...p}}; data.settingsU = Date.now(); persist();
+}
+function bookSheet(){
+  const c = bookCfgApp(), WDS = [[1, 'Пн'], [2, 'Вт'], [3, 'Ср'], [4, 'Чт'], [5, 'Пт'], [6, 'Сб'], [0, 'Вс']];
+  const hours = []; for (let m = 6 * 60; m <= 23 * 60; m += 30) hours.push(hhmm(m));
+  const sel = (name, v, list) => `<select name="${name}">${list.map(([k, l]) => `<option value="${k}" ${String(k) === String(v) ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const seg = (name, v, list) => `<div class="seg">${list.map(([k, l]) => `<label><input type="radio" name="${name}" value="${k}" ${String(k) === String(v) ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>`;
+  const pk = data.packages.filter(p => p.name);
+  openSheet(`${head('Онлайн-запись')}
+    <p class="hint" style="margin:0 6px 14px">Отправь клиенту ссылку — он сам выберет услугу, день и свободное время. Запись сразу появится в календаре, а я пришлю уведомление${session && (session.tg || isTgAccount()) ? ' и сообщение в Telegram' : ''}. Занятые часы клиент не видит.</p>
+    ${!session ? `<div class="card glass" style="margin-bottom:14px"><p style="margin:0 0 10px">Онлайн-запись работает через облако — войди в аккаунт, и календарь будет доступен для записи.</p><button class="btn primary" data-act="book-login">Войти</button></div>` : ''}
+    <form id="bookForm" autocomplete="off">
+      <div class="form"><div class="field"><label for="b-on" style="width:auto">Принимать записи онлайн</label><input type="checkbox" class="sw" id="b-on" name="on" ${c.on ? 'checked' : ''} ${session ? '' : 'disabled'}></div></div>
+      ${c.on && c.slug ? `<div class="card glass" style="margin:14px 0">
+        <div class="label" style="margin-bottom:6px">Ссылка для клиентов</div>
+        <div style="font:600 15px var(--rounded);word-break:break-all;margin-bottom:12px">${esc(bookUrl(c))}</div>
+        <div class="btn-row"><button type="button" class="btn tinted" data-act="book-copy">Скопировать</button><button type="button" class="btn tinted" data-act="book-share">Поделиться</button></div>
+        <button type="button" class="linkbtn" data-act="book-open" style="margin-top:8px">Открыть, как увидит клиент ›</button></div>` : ''}
+      <div class="section-title" style="margin:16px 4px 8px;font-size:16px">Рабочие дни</div>
+      <div class="cats">${WDS.map(([k, l]) => `<label><input type="checkbox" name="days" value="${k}" ${c.days.includes(k) ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
+      <div class="form">
+        <div class="field"><label>Начало</label>${sel('from', c.from, hours.map(h => [h, h]))}</div>
+        <div class="field"><label>Конец</label>${sel('to', c.to, hours.map(h => [h, h]))}</div>
+      </div>
+      <div class="section-title" style="margin:16px 4px 8px;font-size:16px">Записи каждые</div>${seg('step', c.step, [[15, '15 мин'], [30, '30 мин'], [60, '1 час']])}
+      <div class="section-title" style="margin:16px 4px 8px;font-size:16px">Не позже чем за</div>${seg('notice', c.notice, [[60, '1 час'], [180, '3 часа'], [1440, 'сутки']])}
+      <div class="section-title" style="margin:16px 4px 8px;font-size:16px">Вперёд на</div>${seg('horizon', c.horizon, [[14, '2 недели'], [30, 'месяц'], [60, '2 месяца']])}
+      <div class="section-title" style="margin:16px 4px 8px;font-size:16px">Услуги</div>
+      ${pk.length ? `<div class="list" style="background:var(--glass);border:1px solid var(--edge)">${pk.map(p => `<label class="row" style="cursor:pointer"><div class="rt"><div class="t1">${esc(p.name)}</div><div class="t2">${p.dur ? (DURS.find(d => d[0] === p.dur) || [0, ''])[1] : '1 час'}${p.price ? ' · ' + rub(p.price) : ''}</div></div>
+          <input type="checkbox" class="sw" name="svc" value="${p.id}" ${!c.svc || c.svc.includes(p.id) ? 'checked' : ''}></label>`).join('')}</div>
+        <p class="hint" style="margin:8px 6px 0">Клиент выбирает из отмеченных. Цены и длительность — из прайс-листа.</p>`
+      : `<div class="form"><div class="field"><label>Длительность записи</label>${sel('dur', c.dur, DURS.slice(0, 6))}</div></div>
+        <p class="hint" style="margin:8px 6px 0">Заполни прайс-лист — и клиент будет выбирать услугу с ценой. Пока — одна «Запись».</p>`}
+      <button type="button" class="btn tinted" data-act="pkgs" style="margin-top:10px">Прайс-лист</button>
+    </form>`);
+  $('#bookForm').addEventListener('change', ev => {
+    const f = ev.target.form || $('#bookForm'), fd = new FormData(f);
+    if (ev.target.name === 'on'){
+      const on = ev.target.checked;
+      setBook({on, slug: bookCfgApp().slug || Array.from(crypto.getRandomValues(new Uint8Array(8)), b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('')});
+      toast(on ? 'Онлайн-запись включена — отправь ссылку клиентам' : 'Онлайн-запись выключена'); bookSheet(); return;
+    }
+    const days = fd.getAll('days').map(Number), from = fd.get('from'), to = fd.get('to');
+    if (!days.length){ toast('Оставь хотя бы один рабочий день'); ev.target.checked = true; return; }
+    if (to <= from){ toast('Конец рабочего дня должен быть позже начала'); return; }
+    const c0 = bookCfgApp(), p = {days, from, to, step: +fd.get('step') || c0.step, notice: +fd.get('notice') || c0.notice, horizon: +fd.get('horizon') || c0.horizon};
+    if (pk.length){ const ids = fd.getAll('svc'); p.svc = ids.length === pk.length ? undefined : ids; if (!ids.length){ toast('Отметь хотя бы одну услугу'); ev.target.checked = true; return; } }
+    else p.dur = +fd.get('dur') || 60;
+    setBook(p);
   });
 }
 
@@ -3982,6 +4044,11 @@ async function checkUpdate(btn){
     case 'profile': swapSheet(profileSheet); break;
     case 'recap': swapSheet(() => recapSheet(el.dataset.m)); break;
     case 'pkgs': swapSheet(packagesSheet); break;
+    case 'book': swapSheet(bookSheet); break;
+    case 'book-login': loginSheet(() => bookSheet()); break;
+    case 'book-copy': { const u = bookUrl(bookCfgApp()); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast('Ссылка скопирована'), () => toast(u)); break; }
+    case 'book-share': { const u = bookUrl(bookCfgApp()); if (navigator.share) navigator.share({title: 'Онлайн-запись', text: 'Записаться ко мне можно здесь:', url: u}).catch(() => {}); else navigator.clipboard.writeText(u).then(() => toast('Ссылка скопирована')); break; }
+    case 'book-open': window.open(bookUrl(bookCfgApp()), '_blank'); break;
     case 'new-pkg': swapSheet(() => packageForm(null)); break;
     case 'edit-pkg': swapSheet(() => packageForm(data.packages.find(p => p.id === id))); break;
     case 'del-pkg': if (!armDelete(el)) break; data.packages = data.packages.filter(p => p.id !== id); tomb(id); persist(); toast('Удалено'); swapSheet(packagesSheet); break;
