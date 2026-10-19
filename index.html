@@ -621,7 +621,12 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.15.0', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.16.0', tg:'gog_sonn'};
+// открыто внутри Telegram (мини-апп): Telegram передаёт подпись в #tgWebAppData; запоминаем на сессию — перезагрузка не теряет
+const IN_TG = (() => {
+  const hit = /tgWebAppData=/.test(location.hash) || /[?&]tg=1/.test(location.search);
+  try { if (hit) sessionStorage.setItem('kadr.inTg', '1'); return hit || sessionStorage.getItem('kadr.inTg') === '1'; } catch(e){ return hit; }
+})();
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
@@ -905,6 +910,7 @@ function applyTheme(gender, look){
   // цвет строки состояния — как фон
   const mode = root.dataset.mode, base = mode ? getComputedStyle(root).getPropertyValue('--base').trim() : null;
   document.querySelectorAll('meta[name="theme-color"]').forEach((el, i) => el.setAttribute('content', base || (m ? '#07090a' : (i === 0 ? '#f4f1f7' : '#0b0a10'))));
+  if (IN_TG) tgAppColors(); // шапка Telegram — того же цвета
 }
 const lookPreview = () => `<div class="lp" aria-hidden="true"><i></i><i></i><i></i><div class="lp-in">
   <div class="lp-h"><b>Главная</b><span></span></div><div class="lp-row"><div class="lp-c"></div><div class="lp-c"></div></div>
@@ -1921,7 +1927,7 @@ function drawChart(){
 function installBanner(){
   const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   let hidden = false; try { hidden = localStorage.getItem('kadr.installHidden') === '1'; } catch(e) {}
-  if (standalone || hidden || !/iPhone|iPad|iPod/.test(navigator.userAgent)) return '';
+  if (IN_TG || standalone || hidden || !/iPhone|iPad|iPod/.test(navigator.userAgent)) return '';
   return `<div class="card glass install"><span class="ic" style="--c:var(--accent)">${ICONS.share}</span>
     <p><b>Установи как приложение</b>Нажми «Поделиться» внизу Safari, затем «На экран „Домой“».</p>
     <button class="x" data-act="hide-install" aria-label="Скрыть">×</button></div>`;
@@ -2550,6 +2556,10 @@ function tgAuth(kind, resume){
 // вход через Telegram из меню или знакомства; onDone(isNew) — что делать после
 async function tgLogin(onDone, resume){
   let r; try { r = await tgAuth('login', resume); } catch(e){ return; }
+  await afterTgLogin(r, onDone);
+}
+// r — ответ сервера со входом (session, isNew, username): из бота или из мини-аппа
+async function afterTgLogin(r, onDone){
   saveSession({...r.session, tg: r.username});
   if (r.isNew) setOwner(session.uid); else await askLocalData(session.uid);
   closeSheet();
@@ -2560,6 +2570,39 @@ async function tgLogin(onDone, resume){
   else if (onb){ if (data.profile){ onb.classList.add('hide'); setTimeout(() => onb.remove(), 500); applyTheme(data.profile.gender); render(); } else if (onboarding.redraw) onboarding.redraw(); } // знакомство уже открыто — продолжится само
   else if (!data.profile) setTimeout(onboarding, 350);
   else { applyTheme(data.profile.gender); render(); }
+}
+// ---------- мини-апп: то же приложение внутри Telegram (кнопка «Фикус» у бота); вход — по подписи Telegram, без кнопок ----------
+function tgWebApp(){
+  return new Promise(res => {
+    if (window.Telegram && Telegram.WebApp) return res(Telegram.WebApp);
+    const s = document.createElement('script'); s.src = 'https://telegram.org/js/telegram-web-app.js';
+    s.onload = () => res((window.Telegram && Telegram.WebApp) || null); s.onerror = () => res(null);
+    document.head.appendChild(s);
+  });
+}
+// шапка и фон Telegram — в цвет темы приложения
+function tgAppColors(){
+  const wa = window.Telegram && Telegram.WebApp; if (!wa) return;
+  const metas = [...document.querySelectorAll('meta[name="theme-color"]')];
+  const el = metas.find(x => !x.media || matchMedia(x.media).matches) || metas[0];
+  const c = el && el.getAttribute('content'); if (!c || !/^#[0-9a-f]{6}$/i.test(c)) return;
+  try { wa.setHeaderColor(c); wa.setBackgroundColor(c); if (wa.setBottomBarColor) wa.setBottomBarColor(c); } catch(e) {}
+}
+async function tgAppStart(){
+  const needOnb = () => { if (!data.profile && !document.querySelector('.onb')) onboarding(); };
+  const wa = await tgWebApp();
+  if (!wa){ needOnb(); return; }
+  document.documentElement.classList.add('in-tg');
+  try { wa.ready(); wa.expand(); if (wa.disableVerticalSwipes) wa.disableVerticalSwipes(); } catch(e) {}
+  tgAppColors();
+  try { // «Назад» Telegram закрывает открытую шторку
+    wa.BackButton.onClick(() => { if (!$('#sheet').hidden) userClose(); });
+    new MutationObserver(() => { try { $('#sheet').hidden ? wa.BackButton.hide() : wa.BackButton.show(); } catch(e) {} })
+      .observe($('#sheet'), {attributes: true, attributeFilter: ['hidden']});
+  } catch(e) {}
+  if (session || !wa.initData){ needOnb(); return; }
+  try { await afterTgLogin(await fn('tg-webapp', {initData: wa.initData})); }
+  catch(e){ toast('Не получилось войти через Telegram — войди через меню'); needOnb(); }
 }
 // при запуске: если ждали подтверждения из Telegram — продолжаем ждать (или сразу входим, если уже подтвердили)
 function resumeTg(){
@@ -2680,6 +2723,7 @@ function syncLabel(){
 async function refreshCloudUi(){
   const el = $('#cloudStatus'); if (el) el.textContent = syncLabel();
   const pb = $('#pushBox'); if (!pb) return;
+  if (IN_TG){ pb.innerHTML = `<p class="hint" style="margin:0 6px">Внутри Telegram напоминания приходят сообщениями от бота @ficuss_bot — включи ниже «Дублировать в Telegram».</p>`; return; }
   const st = await pushState();
   pb.innerHTML = st === 'on'
     ? `<div class="btn-row"><button class="btn tinted" data-act="push-test">Проверить</button><button class="btn tinted" data-act="push-on">Обновить</button></div><p class="hint" style="margin:10px 6px 0">Уведомления на этом телефоне включены ✓</p>`
@@ -3779,7 +3823,9 @@ applyTheme(data.profile && data.profile.gender);
 render();
 // первый запуск — знакомство вместо заставки
 if (checkRecovery()) $('#splash').hidden = true;
+else if (IN_TG && !session){ $('#splash').hidden = true; tgAppStart(); } // мини-апп: сначала тихий вход, потом (если надо) знакомство
 else if (!data.profile){ $('#splash').hidden = true; onboarding(); } else { showSplash(); setTimeout(askOverdue, 3300); }
+if (IN_TG && session) tgAppStart();
 setTimeout(resumeTg, 600);
 syncNow();
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
