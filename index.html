@@ -1797,6 +1797,8 @@ function renderMoney(){
       <div><div class="l">Получено</div><b>${rub(s.incT)}</b><small>${s.unpaid ? `ожидается <i>+${rub(s.unpaid)}</i>` : 'всё получено'}</small></div>
       <div><div class="l">Расходы</div><b>${rub(s.expT)}</b><small>${s.expPlan ? `предстоит <i>−${rub(s.expPlan)}</i>` : 'нет предстоящих'}</small></div>
     </div></div>`;
+  // явные входы: доход — это запись с суммой (выбор вида заработка), расход — отдельная форма
+  h += `<div class="btn-row"><button class="btn glass tinted" data-act="add-income">${ICONS.plus}Доход</button><button class="btn glass tinted" data-act="add-exp">${ICONS.plus}Расход</button></div>`;
 
   // долги прошлых месяцев — видны в текущем месяце, чтобы не потерялись
   const debts = ui.month === today().slice(0,7) ? debtsBefore(ui.month) : [];
@@ -1830,7 +1832,6 @@ function renderMoney(){
   if (plan.length) h += `<div class="section-title">Ожидаемые расходы · ${rub(s.expPlan)}</div><div class="section-note">Ещё не оплачены и не вычитаются. Нажми «Оплачено?», когда заплатишь.</div><div class="list glass">${plan.map(expRow).join('')}</div>`;
   h += `<div class="section-title">${plan.length ? 'Оплаченные расходы' : 'Расходы'}${s.expT ? ' · ' + rub(s.expT) : ''}</div>`;
   if (done.length) h += `<div class="list glass">${done.map(expRow).join('')}</div>`;
-  h += `<button class="btn glass tinted" data-act="add-exp">${ICONS.plus}Добавить расход</button>`;
   return h + `</div>`;
 }
 
@@ -1917,11 +1918,21 @@ function installBanner(){
 
 /* ---------- шторка ---------- */
 let sheetOnClose = null;
+// что-то ввели в форме шторки — случайный тап мимо или свайп не должны это стереть
+let sheetDirty = false;
+document.addEventListener('input', ev => { if (ev.target.closest && ev.target.closest('#sheet form') && ev.target.type !== 'search') sheetDirty = true; }, true);
+document.addEventListener('change', ev => { if (ev.target.closest && ev.target.closest('#sheet form')) sheetDirty = true; }, true);
+document.addEventListener('submit', () => { sheetDirty = false; }, true); // сохранили — закрываем без вопросов
+function userClose(){
+  if (sheetDirty && !confirm('Закрыть без сохранения? Введённое пропадёт.')) return false;
+  closeSheet(); return true;
+}
 function openSheet(html){
   const sh = $('#sheet'), sc = $('#scrim');
   // шторка поверх знакомства (вход через Telegram, вопрос про записи на телефоне)
   document.body.classList.toggle('over-onb', !!document.querySelector('.onb:not(.hide)'));
   clearTimeout(openSheet.t);
+  sheetDirty = false;
   sh.innerHTML = `<div class="grabber"></div>` + html;
   // без подсказки «Автозаполнить контакт» над клавиатурой (кроме почты и пароля)
   sh.querySelectorAll('input:not([type=hidden]):not([type=email]):not([type=password]):not([autocomplete])').forEach(i => i.setAttribute('autocomplete', 'off'));
@@ -1955,7 +1966,7 @@ const sheetOpen = () => !$('#sheet').hidden && $('#sheet').classList.contains('s
   sh.addEventListener('touchend', () => {
     if (drag){
       sh.style.transition = ''; sh.style.transform = ''; $('#scrim').style.opacity = '';
-      if (dy > 110) closeSheet();
+      if (dy > 110) userClose();
     }
     y0 = null; drag = false;
   });
@@ -2224,10 +2235,10 @@ function addItems(sec){
     `data-type="${sec === 'life' ? 'task' : 'shoot'}" data-title="${esc(o.t)}" data-emoji="${esc(o.e)}"`, sec === 'life' ? 'var(--green)' : TYPES.shoot.color,
     `<span class="emo">${esc(o.e || '⭐️')}</span>`, esc(o.t), sec === 'life' ? 'Своё дело' : 'Своя запись — с суммой'));
   if (sec === 'work') return [
-    it('shoot', 'new-entry', 'data-type="shoot"', TYPES.shoot.color, ICONS.shoot, TYPES.shoot.one, 'Дата, время, сумма и предоплата'),
+    it('shoot', 'new-entry', 'data-type="shoot"', TYPES.shoot.color, ICONS.shoot, TYPES.shoot.one, 'С датой и суммой — сумма станет доходом'),
     ...(postOn() ? [it('retouch', 'new-entry', 'data-type="retouch"', TYPES.retouch.color, ICONS.retouch, TYPES.retouch.one, prof().post.sub)] : []),
     it('lesson', 'new-entry', 'data-type="lesson"', TYPES.lesson.color, ICONS.lesson, 'Встреча или созвон с ' + student, 'Можно списать с абонемента'),
-    it('other', 'new-entry', 'data-type="other"', TYPES.other.color, ICONS.other, 'Другой доход', prof().types.other.ph), ...own];
+    it('other', 'new-entry', 'data-type="other"', TYPES.other.color, ICONS.other, 'Другой доход', 'Разовая оплата: продажа, аренда, консультация'), ...own];
   if (sec === 'life') return [
     it('task', 'new-entry', 'data-type="task"', TYPES.task.color, ICONS.task, 'Дело', 'Своё название, время занято — без денег'),
     ...LIFE_PRESETS.map(([em, t]) => it('p:' + t, 'new-entry', `data-type="task" data-title="${t}" data-emoji="${em}"`, 'var(--green)', `<span class="emo">${em}</span>`, t, 'Дело без денег')), ...own];
@@ -2260,7 +2271,7 @@ function addChooser(sec){
   }
   openSheet(`${head('Добавить')}
     <div class="add-secs">${secs.map(([k, em, l]) => `<button class="add-sec ${k === sec ? 'on' : ''}" data-act="add-sec" data-s="${k}"><span>${em}</span>${l}</button>`).join('')}</div>
-    <p class="hint" style="margin:0 6px 10px">${edit ? 'Скрой то, что не нужно, и добавь своё. Скрытое можно вернуть.' : sec === 'work' ? 'Записи, которые приносят деньги.' : sec === 'life' ? 'Личное время — в календаре, но без денег.' : 'Клиенты, абонементы и расходы.'}</p>
+    <p class="hint" style="margin:0 6px 10px">${edit ? 'Скрой то, что не нужно, и добавь своё. Скрытое можно вернуть.' : sec === 'work' ? 'Всё, за что тебе платят. Сумма из записи — это твой доход в «Деньгах».' : sec === 'life' ? 'Личное время — в календаре, но без денег.' : 'Клиенты, абонементы и расходы.'}</p>
     <div class="list" style="background:var(--glass);border:1px solid var(--edge);margin-bottom:6px">${list}</div>
     <button class="btn tinted" data-act="add-edit">${edit ? 'Готово' : 'Настроить список'}</button>`);
 }
@@ -3083,7 +3094,8 @@ function profileSheet(){
       <input type="file" id="ava-file" accept="image/*" hidden></div>
     <form id="profForm" autocomplete="off">
       <div class="form"><div class="field"><label for="pf-name">Имя</label><input id="pf-name" value="${esc(p.name||'')}" placeholder="Как к тебе обращаться"></div></div>
-      <div class="seg"><label><input type="radio" name="pf-g" value="f" ${p.gender!=='m'?'checked':''}><span>Обращаться «она»</span></label><label><input type="radio" name="pf-g" value="m" ${p.gender==='m'?'checked':''}><span>Обращаться «он»</span></label></div>
+      <p class="hint" style="margin:0 6px 6px">Пол — чтобы правильно к тебе обращаться</p>
+      <div class="seg"><label><input type="radio" name="pf-g" value="f" ${p.gender!=='m'?'checked':''}><span>Женский</span></label><label><input type="radio" name="pf-g" value="m" ${p.gender==='m'?'checked':''}><span>Мужской</span></label></div>
       <div class="cats" id="pfProf">${Object.entries(PROFS).map(([k, pr]) => `<label><input type="radio" name="pf-p" value="${k}" ${(p.profession || 'photo') === k ? 'checked' : ''}><span>${pr.name}</span></label>`).join('')}</div>
       <div class="form" id="pfProfNameBox" ${p.profession === 'custom' ? '' : 'hidden'}><div class="field"><label for="pf-profname">Профессия</label><input id="pf-profname" value="${esc(p.profName||'')}" placeholder="Например, тату-мастер"></div></div>
       <p class="hint">${prof().sun ? 'Город нужен для золотого часа и погоды.' : 'Город нужен для погоды в день записи.'}</p>
@@ -3132,7 +3144,8 @@ function onboarding(){
     } else if (st.step === 1){
       body = `<h2>Как тебя зовут?</h2><p>Буду обращаться по имени.</p>
         <div class="form"><div class="field"><input id="ob-name" value="${esc(st.name)}" placeholder="Имя" autocomplete="off" style="text-align:left"></div></div>
-        <div class="seg"><label><input type="radio" name="ob-g" value="f" ${st.gender==='f'?'checked':''}><span>Обращаться «она»</span></label><label><input type="radio" name="ob-g" value="m" ${st.gender==='m'?'checked':''}><span>Обращаться «он»</span></label></div>`;
+        <p style="margin:14px 0 6px">Выбери пол — чтобы правильно к тебе обращаться</p>
+        <div class="seg"><label><input type="radio" name="ob-g" value="f" ${st.gender==='f'?'checked':''}><span>Женский</span></label><label><input type="radio" name="ob-g" value="m" ${st.gender==='m'?'checked':''}><span>Мужской</span></label></div>`;
     } else if (st.step === 2){
       body = `<h2>Чем ты занимаешься?</h2><p>Под это настроятся разделы и подсказки.</p>
         <div class="list" style="background:var(--glass);border:1px solid var(--edge)">
@@ -3519,6 +3532,7 @@ document.addEventListener('click', ev => {
     case 'add': addChooser.edit = false; addChooser(); break;
     case 'new-entry': swapSheet(() => entryForm(null, {type: el.dataset.type, title: el.dataset.title, emoji: el.dataset.emoji})); break;
     case 'add-sec': addChooser(el.dataset.s); break;
+    case 'add-income': addChooser.edit = false; addChooser('work'); break;
     case 'add-edit': addChooser.edit = !addChooser.edit; addChooser(); break;
     case 'add-toggle': addSettings(st => { const k = addChooser.last + ':' + el.dataset.k, h = st.addHide || []; st.addHide = h.includes(k) ? h.filter(x => x !== k) : [...h, k]; }); break;
     case 'add-own-del': addSettings(st => { const o = {...(st.addOwn || {})}; o[addChooser.last] = (o[addChooser.last] || []).filter((_, i) => i !== +el.dataset.k); st.addOwn = o; }); break;
@@ -3671,7 +3685,7 @@ document.addEventListener('click', ev => {
     case 'import': $('#importFile').click(); break;
     case 'open-month': ui.month = el.dataset.m; ui.tab = 'money'; render(); scrollTo({top:0}); break;
     case 'hide-install': try{localStorage.setItem('kadr.installHidden','1')}catch(e){} render(); break;
-    case 'close': closeSheet(); break;
+    case 'close': userClose(); break;
     case 'del-entry': case 'del-exp':
       if (!armDelete(el)) break;
       if (a === 'del-entry') data.entries = data.entries.filter(e => e.id !== id); else data.expenses = data.expenses.filter(x => x.id !== id);
