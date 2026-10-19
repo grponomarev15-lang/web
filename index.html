@@ -617,7 +617,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.13', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.14', tg:'gog_sonn'};
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
@@ -1036,8 +1036,13 @@ function clientStats(id){
     es, subs,
     // «принесла» — только реально полученные деньги (без неоплаченного и возвратов)
     total: [...es, ...subs].reduce((a, x) => a + payments(x).reduce((b, p) => b + p.a, 0), 0),
+    // «ждёт оплаты» — выставлено, но ещё не получено (без отменённых)
+    due: [...es, ...subs].reduce((a, x) => a + ((payState(x) || {}).due || 0), 0),
+    // есть ли вообще что-то с суммой — так отличаем клиентов от друзей и родных из дел
+    billed: es.some(e => +e.amount > 0) || subs.some(s => +s.price > 0),
     noshow: es.filter(e => e.status === 'noshow').length,
-    shoots: es.filter(e => e.type === 'shoot').length,
+    // «заказы» — работа с деньгами: основной тип и «другой доход», без отменённых
+    shoots: es.filter(e => (e.type === 'shoot' || e.type === 'other') && !e.status).length,
     lessons: es.filter(e => e.type === 'lesson').length,
     last: past[0] ? past[0].date : null,
     lastShoot: (past.find(e => e.type === 'shoot') || {}).date || null,
@@ -1623,7 +1628,8 @@ function clientRow(c, sub){
     <div class="rr">${st.total ? `<div class="amt">${rub(st.total)}</div>` : ''}</div></div>`;
 }
 // клиент «с деньгами» — есть оплачиваемые записи или абонементы; остальные — друзья, родные, коллеги из дел
-const isPaying = st => st.total > 0 || st.isStudent;
+// клиент — есть запись с суммой или абонемент (оплачено или ещё ждёт оплаты); остальные — друзья и родные из дел
+const isPaying = st => st.billed || st.isStudent;
 function clientListHtml(){
   const q = ui.q.trim().toLowerCase(), want = ui.cfilter || 'pay';
   const list = data.clients.filter(c => !q || c.name.toLowerCase().includes(q) || (c.phone||'').includes(q) || (c.insta||'').toLowerCase().includes(q))
@@ -1692,7 +1698,7 @@ function clientSheet(id){
     </div>
     ${c.note ? `<div class="form" style="padding:14px 16px;font-size:15px">${esc(c.note)}</div>` : ''}
     <div class="stats" style="margin-bottom:14px">
-      <div class="card glass stat"><div class="label">Всего принесла</div><b>${rub(st.total)}</b>${st.noshow ? `<span style="color:var(--red)">${st.noshow} ${plural(st.noshow,'неявка','неявки','неявок')}</span>` : ''}</div>
+      <div class="card glass stat"><div class="label">Всего принесла</div><b>${rub(st.total)}</b>${st.due ? `<span>ещё ждёт ${rub(st.due)}</span>` : ''}${st.noshow ? `<span style="color:var(--red)">${st.noshow} ${plural(st.noshow,'неявка','неявки','неявок')}</span>` : ''}</div>
       <div class="card glass stat"><div class="label">${st.isStudent && !st.shoots ? 'Занятий' : prof().unit.stat}</div><b>${st.isStudent && !st.shoots ? st.lessons : st.shoots}</b><span>${st.last ? 'последний раз ' + ago(st.last) : 'ещё не было'}</span></div>
     </div>
     ${st.subs.length ? `<div class="section-title" style="margin:6px 4px 10px">Абонементы</div>${st.subs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(s => subCard(s,false)).join('')}<div style="height:14px"></div>` : ''}
