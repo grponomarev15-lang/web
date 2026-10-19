@@ -201,6 +201,16 @@ a{color:inherit;text-decoration:none}
 .section-note{font-size:14px;color:var(--fg2);margin:-8px 4px -2px}
 
 /* фраза дня */
+/* подробная аналитика */
+.ana-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;font:600 17px var(--rounded)}
+.ana-tabs span{font-size:13px;padding-left:2px;padding-right:2px}
+#ana{min-height:70vh} /* шторка не прыгает по высоте при смене раздела */
+.lim,.mb{height:6px;border-radius:3px;background:var(--edge);overflow:hidden;margin-top:6px}
+.mb{height:5px;margin-top:4px}
+.lim i,.mb i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+.lim.over i{background:var(--red)}
+.mb i.in{background:var(--green)} .mb i.out{background:var(--orange)}
+.amt.pos{color:var(--green)}
 .phrase{display:flex;gap:12px;align-items:center;text-align:left;width:100%}
 .phrase .spark{width:38px;height:38px;border-radius:12px;flex:none;display:grid;place-items:center;color:var(--on-grad);background:var(--grad)}
 .phrase .spark svg{width:20px;height:20px}
@@ -621,7 +631,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.16.0', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.17.0', tg:'gog_sonn'};
 // открыто внутри Telegram (мини-апп): Telegram передаёт подпись в #tgWebAppData; запоминаем на сессию — перезагрузка не теряет
 const IN_TG = (() => {
   const hit = /tgWebAppData=/.test(location.hash) || /[?&]tg=1/.test(location.search);
@@ -966,14 +976,14 @@ const DEFAULT_TEMPLATES = [
   {id:'tpl-ready', name:'Фото готовы', text:'{имя}, твои фото готовы! Отправляю ссылку на галерею. Буду рад[а|] отзыву ❤️'},
   {id:'tpl-thanks', name:'Спасибо за съёмку', text:'{имя}, спасибо за съёмку! Было очень приятно работать. Фото будут готовы в течение 10 дней.'}
 ];
-function blank(){ return {entries:[], expenses:[], clients:[], subs:[], packages:[], templates:DEFAULT_TEMPLATES.map(t => ({...t})), profile:null, profileU:0, goal:0, goalU:0, settings:{rem:{...DEFAULT_REM}}, settingsU:0, deleted:{}, lastBackup:null, ach:{}}; }
+function blank(){ return {entries:[], expenses:[], accounts:[], clients:[], subs:[], packages:[], templates:DEFAULT_TEMPLATES.map(t => ({...t})), profile:null, profileU:0, goal:0, goalU:0, settings:{rem:{...DEFAULT_REM}}, settingsU:0, deleted:{}, lastBackup:null, ach:{}}; }
 // только нормальные записи: битая (null, без id) выкидывается по одной, а не обнуляет всю базу
 const okRecs = a => Array.isArray(a) ? a.filter(r => r && typeof r === 'object' && r.id) : [];
 function normalize(d){
   const out = blank();
   if (!d || typeof d !== 'object' || !Array.isArray(d.entries)) return out;
   Object.assign(out, {entries:okRecs(d.entries), expenses:okRecs(d.expenses), clients:okRecs(d.clients).filter(c => typeof c.name === 'string'), subs:okRecs(d.subs), goal:+d.goal||0, goalU:d.goalU||0,
-    packages:okRecs(d.packages), templates:Array.isArray(d.templates) ? d.templates : out.templates, profile:d.profile||null, profileU:d.profileU||0,
+    packages:okRecs(d.packages), accounts:okRecs(d.accounts), templates:Array.isArray(d.templates) ? d.templates : out.templates, profile:d.profile||null, profileU:d.profileU||0,
     settings:{...out.settings, ...(d.settings||{}), rem:{...DEFAULT_REM, ...((d.settings||{}).rem||{})}}, settingsU:d.settingsU||0,
     deleted:d.deleted||{}, lastBackup:d.lastBackup||null, ach:d.ach||{}});
   // старые записи: имя клиента строкой -> карточка клиента
@@ -1816,6 +1826,7 @@ function renderMoney(){
     </div></div>`;
   // явные входы: доход — это запись с суммой (выбор вида заработка), расход — отдельная форма
   h += `<div class="btn-row"><button class="btn glass tinted" data-act="add-income">${ICONS.plus}Доход</button><button class="btn glass tinted" data-act="add-exp">${ICONS.plus}Расход</button></div>`;
+  h += `<button class="card glass phrase" data-act="ana"><span class="spark">${ICONS.trophy}</span><p>Подробная аналитика<small>Счета, лимиты по статьям, деньги по месяцам, выгрузка в Excel</small></p></button>`;
 
   // долги прошлых месяцев — видны в текущем месяце, чтобы не потерялись
   const debts = ui.month === today().slice(0,7) ? debtsBefore(ui.month) : [];
@@ -2049,6 +2060,7 @@ function entryForm(e, preset = {}){
         <div class="field"><label for="f-amount">Сумма, ₽</label><input id="f-amount" name="amount" inputmode="decimal" value="${e.amount||''}" placeholder="0"></div>
         <div class="field"><label for="f-pre">Предоплата, ₽</label><input id="f-pre" name="prepaid" inputmode="decimal" value="${e.prepaid||''}" placeholder="0"></div>
         <div class="field"><label for="f-paid" style="width:auto">Оплачено полностью</label><input type="checkbox" class="sw" id="f-paid" name="paid" ${e.paid?'checked':''}></div>
+        ${accField(e.acc)}
       </div>
       ${!isNew && e.type !== 'task' && e.type !== 'retouch' ? `<div class="form" id="statusBox">
         <div class="seg" role="radiogroup" aria-label="Как прошло" style="margin:8px">${[['', 'Состоялась'], ['cancel', 'Отмена'], ['noshow', 'Неявка']].map(([v, l]) => `<label><input type="radio" name="status" value="${v}" ${(e.status || '') === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
@@ -2160,7 +2172,7 @@ function entryForm(e, preset = {}){
       dur: type === 'retouch' ? undefined : +fd.get('dur') || 60,
       format: type === 'lesson' ? fd.get('f-format') : undefined,
       subId: subId || undefined,
-      amount, prepaid, paid: !!fd.get('paid') || (amount > 0 && prepaid >= amount),
+      amount, prepaid, paid: !!fd.get('paid') || (amount > 0 && prepaid >= amount), acc: fd.get('acc') || e.acc || undefined,
       done: type === 'retouch' || (type === 'task' && !fd.get('repeat')) ? !!fd.get('done') : undefined,
       repeat: type === 'task' && fd.get('repeat') ? {f: fd.get('repeat'), until: fd.get('until') || '', ...(fd.get('repeat') === 'hours' ? {step: +fd.get('step') || 3, to: fd.get('repto') || '21:00'} : {})} : undefined,
       doneOn: type === 'task' && fd.get('repeat') ? e.doneOn : undefined,
@@ -2209,6 +2221,7 @@ function expenseForm(x){
         <div class="field"><label for="e-amount">Сумма, ₽</label><input id="e-amount" name="amount" inputmode="decimal" value="${x.amount||''}" placeholder="0" required></div>
         <div class="field"><label for="e-date">Дата</label><input type="date" id="e-date" name="date" value="${esc(x.date)}" required></div>
         <div class="field col"><label for="e-title">Описание</label><input id="e-title" name="title" value="${esc(x.title||'')}" placeholder="${ph('exp')}"></div>
+        ${accField(x.acc)}
       </div>
       <div class="actions">
         <button type="submit" class="btn primary">${isNew ? 'Добавить' : 'Сохранить'}</button>
@@ -2223,10 +2236,10 @@ function expenseForm(x){
     const date = fd.get('date') || defaultDate(), cat = fd.get('e-cat') || 'other';
     // будущий расход — «ожидается» и не считается, пока не подтвердишь оплату; прошедший — уже оплачен
     const paid = date > today() ? false : isNew ? true : x.paid !== false;
-    const rec = touch({id: x.id || uid(), cat, catName: (expCats().find(c => c.k === cat) || {}).l || x.catName, amount, date, title: fd.get('title').trim(), paid});
+    const rec = touch({id: x.id || uid(), cat, catName: (expCats().find(c => c.k === cat) || {}).l || x.catName, amount, date, title: fd.get('title').trim(), paid, acc: fd.get('acc') || x.acc || undefined});
     if (isNew) data.expenses.push(rec); else data.expenses[data.expenses.findIndex(y => y.id === x.id)] = rec;
     persist(); ui.month = rec.date.slice(0,7);
-    closeSheet(); render(); toast(!rec.paid ? 'Расход запланирован — посчитаю, когда подтвердишь оплату' : isNew ? 'Расход записан' : 'Сохранено');
+    closeSheet(); render(); toast(limitWarn(rec) || (!rec.paid ? 'Расход запланирован — посчитаю, когда подтвердишь оплату' : isNew ? 'Расход записан' : 'Сохранено'));
   });
 }
 // редактор статей расходов
@@ -2241,6 +2254,206 @@ function expCatsSheet(){
     <div class="actions"><button class="btn primary" data-act="exp-cats-done">Готово</button><button class="btn tinted" data-act="exp-cats-reset">Вернуть стандартные</button></div>`);
 }
 function setExpCats(list){ data.settings = {...data.settings, expCats: list}; data.settingsU = Date.now(); persist(); expCatsSheet(); }
+
+/* ---------- финансы: счета, лимиты по статьям, подробная аналитика, выгрузка в Excel ---------- */
+// счета — где лежат деньги (карта, наличные, расчётный счёт). Запись без счёта считается на первом (основном).
+const accList = () => (data.accounts || []).slice().sort((a, b) => (a.created || 0) - (b.created || 0));
+const accIdOf = x => { const l = accList(); return x.acc && l.some(a => a.id === x.acc) ? x.acc : (l[0] || {}).id; };
+const accName = id => (accList().find(a => a.id === id) || {}).name || '';
+function accBalance(a, upTo = today()){
+  let s = +a.start || 0;
+  for (const x of [...data.entries, ...data.subs]) if (accIdOf(x) === a.id) for (const p of payments(x)) if (p.d <= upTo) s += p.a;
+  for (const x of data.expenses) if (accIdOf(x) === a.id && x.paid !== false && x.date <= upTo) s -= +x.amount || 0;
+  return s;
+}
+// выбор счёта в формах — только когда счетов два и больше
+const accField = cur => accList().length < 2 ? '' : `<div class="field"><label for="f-acc">Счёт</label><select id="f-acc" name="acc">${accList().map(a => `<option value="${a.id}" ${(cur || accList()[0].id) === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></div>`;
+function accForm(a){
+  const isNew = !a; a = a || {name:'', syn:'', start:''};
+  openSheet(`${head(isNew ? 'Новый счёт' : 'Счёт')}
+    <form id="accForm" autocomplete="off"><div class="form">
+      <div class="field col"><label for="a-name">Название</label><input id="a-name" name="name" maxlength="30" value="${esc(a.name)}" placeholder="Карта, наличные, расчётный счёт" required></div>
+      <div class="field"><label for="a-start">Остаток на старте, ₽</label><input id="a-start" name="start" inputmode="decimal" value="${a.start || ''}" placeholder="0"></div>
+      <div class="field col"><label for="a-syn">Как называешь в боте</label><input id="a-syn" name="syn" maxlength="60" value="${esc(a.syn || '')}" placeholder="через запятую: нал, кэш"></div>
+    </div>
+    <p class="hint" style="margin:8px 6px 0">Остаток = сколько было на старте + что пришло − что потратил${accList().length ? '' : '. Все прежние записи попадут на этот счёт'}. В боте: «такси 500 нал».</p>
+    <div class="actions"><button type="submit" class="btn primary">${isNew ? 'Добавить' : 'Сохранить'}</button>
+      ${isNew ? '' : `<button type="button" class="btn danger" data-act="acc-del" data-id="${a.id}">Удалить счёт</button>`}</div></form>`);
+  $('#accForm').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const fd = new FormData(ev.target), name = fd.get('name').trim();
+    if (!name){ toast('Напиши название'); return; }
+    const rec = touch({...a, id: a.id || uid(), name, syn: fd.get('syn').trim(), start: parseAmount(fd.get('start')) || 0, created: a.created || Date.now()});
+    data.accounts = isNew ? [...(data.accounts || []), rec] : data.accounts.map(x => x.id === rec.id ? rec : x);
+    persist(); ana.view = 'acc'; anaSheet(); toast(isNew ? 'Счёт добавлен' : 'Сохранено');
+  });
+}
+// лимит статьи в месяц (settings.expCats[i].lim); стандартные статьи при первом лимите становятся своими
+const catLimit = k => +((expCats().find(c => c.k === k) || {}).lim) || 0;
+function setCatLimit(k, lim){
+  const list = expCats().map(c => ({...c}));
+  if (!list.some(c => c.k === k)) list.push({k, l: EXP[k] || 'Другое'});
+  list.forEach(c => { if (c.k === k){ if (lim > 0) c.lim = lim; else delete c.lim; } });
+  data.settings = {...data.settings, expCats: list}; data.settingsU = Date.now(); persist();
+}
+const spentIn = (k, ym) => data.expenses.filter(x => x.cat === k && x.paid !== false && x.date && x.date.slice(0, 7) === ym).reduce((s, x) => s + (+x.amount || 0), 0);
+// после записи расхода: предупредить, если статья подходит к лимиту или вышла за него
+function limitWarn(x){
+  const lim = catLimit(x.cat); if (!lim || x.paid === false) return '';
+  const s = spentIn(x.cat, x.date.slice(0, 7));
+  return s > lim ? `⚠️ «${expLabel(x)}»: ${rub(s)} из ${rub(lim)} — лимит превышен` : s >= lim * .8 ? `«${expLabel(x)}»: ${rub(s)} из ${rub(lim)} — почти лимит` : '';
+}
+function limitForm(k){
+  const c = expCats().find(c => c.k === k) || {k, l: EXP[k] || 'Другое'};
+  openSheet(`${head('Лимит: ' + esc(c.l))}
+    <form id="limForm"><div class="form"><div class="field"><label for="l-sum">В месяц, ₽</label><input id="l-sum" name="lim" inputmode="decimal" value="${c.lim || ''}" placeholder="без лимита"></div></div>
+    <p class="hint" style="margin:8px 6px 0">Подскажу, когда расходы по статье подойдут к лимиту и когда выйдут за него. Пусто — без лимита.</p>
+    <div class="actions"><button type="submit" class="btn primary">Сохранить</button></div></form>`);
+  $('#limForm').addEventListener('submit', ev => { ev.preventDefault(); setCatLimit(k, parseAmount(new FormData(ev.target).get('lim')) || 0); ana.view = 'cats'; anaSheet(); toast('Сохранено'); });
+}
+// все движения денег за период: доход — в день оплаты (задаток / остаток), расход — оплаченный
+function moneyOps(from, to){
+  const out = [], inP = d => d >= from && d <= to;
+  for (const x of data.entries) for (const p of payments(x)) if (inP(p.d)) out.push({d: p.d, a: p.a, kind: 'in', x, col: 'entries'});
+  for (const x of data.subs) for (const p of payments(x)) if (inP(p.d)) out.push({d: p.d, a: p.a, kind: 'in', x, col: 'subs'});
+  for (const x of data.expenses) if (x.paid !== false && x.date && inP(x.date)) out.push({d: x.date, a: +x.amount || 0, kind: 'out', x, col: 'expenses'});
+  return out.sort((a, b) => b.d.localeCompare(a.d) || (b.x.u || 0) - (a.x.u || 0));
+}
+const opTitle = o => o.col === 'expenses' ? (o.x.title || expLabel(o.x)) : o.col === 'subs' ? subTitle(o.x) : (o.x.title || TYPES[o.x.type].one);
+const opCat = o => o.col === 'expenses' ? expLabel(o.x) : o.col === 'subs' ? 'Абонементы' : TYPES[o.x.type].many;
+const opWho = o => o.col === 'expenses' ? '' : clientName(o.x) || '';
+const opAct = o => o.col === 'expenses' ? `data-act="edit-exp" data-id="${o.x.id}"` : o.col === 'subs' ? `data-act="edit-sub" data-id="${o.x.id}"` : `data-act="edit" data-id="${o.x.id}"`;
+
+// экран «Подробная аналитика» (шторка): Обзор · Месяцы · Статьи · Счета · Операции
+const ana = {view: 'sum', ym: '', year: false, kind: 'all', q: ''};
+function anaPer(){
+  const y = ana.ym.slice(0, 4);
+  return ana.year ? {from: y + '-01-01', to: y + '-12-31', label: y + ' год', months: 12} : {from: ana.ym + '-01', to: ana.ym + '-31', label: monthTitle(ana.ym), months: 1};
+}
+function anaBody(){
+  const per = anaPer(), ops = moneyOps(per.from, per.to);
+  const inT = ops.filter(o => o.kind === 'in').reduce((s, o) => s + o.a, 0), outT = ops.filter(o => o.kind === 'out').reduce((s, o) => s + o.a, 0);
+  const nav = `<div class="ana-nav"><button class="circle" data-act="ana-per" data-k="-1" aria-label="Назад">${ICONS.left}</button>
+    <b style="text-transform:capitalize">${per.label}</b><button class="circle" data-act="ana-per" data-k="1" aria-label="Вперёд">${ICONS.right}</button></div>
+    <div class="seg" style="margin-bottom:14px"><label><input type="radio" name="ana-y" data-act="ana-year" value="" ${ana.year ? '' : 'checked'}><span>Месяц</span></label><label><input type="radio" name="ana-y" data-act="ana-year" value="1" ${ana.year ? 'checked' : ''}><span>Год</span></label></div>`;
+  const opRow = o => `<div class="row" ${opAct(o)} role="button" tabindex="0"><span class="ic" style="--c:${o.kind === 'in' ? 'var(--green)' : 'var(--gray)'}">${o.kind === 'in' ? ICONS.plus : ICONS.expense}</span>
+    <div class="rt"><div class="t1">${esc(opTitle(o))}</div><div class="t2">${esc([shortDate(o.d), opCat(o), opWho(o), accList().length > 1 ? accName(accIdOf(o.x)) : ''].filter(Boolean).join(' · '))}</div></div>
+    <div class="rr"><div class="amt ${o.kind === 'in' ? 'pos' : ''}">${o.kind === 'in' ? '+' : '−'}${rub(o.a)}</div></div></div>`;
+  let h = '';
+  if (ana.view === 'sum'){
+    const ids = new Set(), wait = [...data.entries, ...data.subs].filter(x => x.date && x.date >= per.from && x.date <= per.to).reduce((s, x) => s + dueOf(x), 0);
+    ops.forEach(o => o.kind === 'in' && o.col === 'entries' && ids.add(o.x.id));
+    const byWho = new Map(); ops.filter(o => o.kind === 'in').forEach(o => { const w = opWho(o); if (w) byWho.set(w, (byWho.get(w) || 0) + o.a); });
+    const byType = new Map(); ops.filter(o => o.kind === 'in').forEach(o => byType.set(opCat(o), (byType.get(opCat(o)) || 0) + o.a));
+    h += nav + `<div class="stats">
+      <div class="card glass stat"><div class="label">Пришло</div><b>${shortRub(inT)}</b><span>${rub(inT)}</span></div>
+      <div class="card glass stat"><div class="label">Ушло</div><b>${shortRub(outT)}</b><span>${rub(outT)}</span></div>
+      <div class="card glass stat"><div class="label">Итог</div><b class="${inT - outT < 0 ? 'neg' : ''}">${inT - outT < 0 ? '−' : ''}${shortRub(Math.abs(inT - outT))}</b><span>${inT ? 'рентабельность ' + Math.round((inT - outT) / inT * 100) + '%' : 'пока без дохода'}</span></div>
+      <div class="card glass stat"><div class="label">Средний чек</div><b>${ids.size ? shortRub(inT / ids.size) : '—'}</b><span>${ids.size ? ids.size + ' ' + plural(ids.size, 'оплата', 'оплаты', 'оплат') : 'нет оплат'}</span></div></div>`;
+    if (wait) h += `<p class="hint" style="margin:10px 6px 0">Ещё ждёт оплаты за этот период: <b>${rub(wait)}</b></p>`;
+    if (byType.size) h += `<div class="section-title">Откуда доход</div><div class="list glass">${[...byType].sort((a, b) => b[1] - a[1]).map(([n, v]) => `<div class="row"><div class="rt"><div class="t1">${esc(n)}</div><div class="lim"><i style="width:${v / inT * 100}%"></i></div></div><div class="rr"><div class="amt">${rub(v)}</div><div class="t2">${Math.round(v / inT * 100)}%</div></div></div>`).join('')}</div>`;
+    if (byWho.size) h += `<div class="section-title">Лучшие клиенты</div><div class="list glass">${[...byWho].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n, v], i) => `<div class="row"><span class="ic" style="--c:var(--accent);font:700 14px var(--rounded)">${i + 1}</span><div class="rt"><div class="t1">${esc(n)}</div></div><div class="rr"><div class="amt">${rub(v)}</div></div></div>`).join('')}</div>`;
+    if (!ops.length) h += `<div class="empty"><b>За ${ana.year ? 'этот год' : 'этот месяц'} движений нет</b><p>Доходы появятся из оплаченных записей, расходы — из «+ Расход».</p></div>`;
+  }
+  if (ana.view === 'months'){
+    const y = ana.ym.slice(0, 4), rows = []; let ti = 0, to = 0;
+    const last = y === today().slice(0, 4) ? +today().slice(5, 7) : 12; // будущие месяцы не показываем
+    for (let m = 1; m <= last; m++){ const ym = y + '-' + pad(m), o = moneyOps(ym + '-01', ym + '-31'), i = o.filter(x => x.kind === 'in').reduce((s, x) => s + x.a, 0), e = o.filter(x => x.kind === 'out').reduce((s, x) => s + x.a, 0); ti += i; to += e; rows.push({ym, i, e}); }
+    const max = Math.max(1, ...rows.map(r => Math.max(r.i, r.e)));
+    h += `<div class="ana-nav"><button class="circle" data-act="ana-per" data-k="-12" aria-label="Прошлый год">${ICONS.left}</button><b>${y} год</b><button class="circle" data-act="ana-per" data-k="12" aria-label="Следующий год">${ICONS.right}</button></div>
+      <p class="hint" style="margin:0 6px 10px">Сколько денег пришло и ушло каждый месяц (по дню оплаты).</p><div class="list glass">${rows.map(r => `<div class="row" data-act="ana-month" data-m="${r.ym}" role="button" tabindex="0">
+      <div class="rt"><div class="t1" style="text-transform:capitalize">${MONTHS[+r.ym.slice(5) - 1]}</div>
+        <div class="mb"><i class="in" style="width:${r.i / max * 100}%"></i></div><div class="mb"><i class="out" style="width:${r.e / max * 100}%"></i></div></div>
+      <div class="rr"><div class="amt ${r.i - r.e < 0 ? 'neg' : ''}">${r.i || r.e ? (r.i - r.e < 0 ? '−' : '') + rub(Math.abs(r.i - r.e)) : '—'}</div><div class="t2">+${shortRub(r.i)} / −${shortRub(r.e)}</div></div></div>`).join('')}
+      <div class="row"><div class="rt"><div class="t1"><b>Итого за год</b></div></div><div class="rr"><div class="amt ${ti - to < 0 ? 'neg' : ''}">${ti - to < 0 ? '−' : ''}${rub(Math.abs(ti - to))}</div><div class="t2">+${shortRub(ti)} / −${shortRub(to)}</div></div></div></div>`;
+  }
+  if (ana.view === 'cats'){
+    const by = new Map(); ops.filter(o => o.kind === 'out').forEach(o => by.set(o.x.cat, (by.get(o.x.cat) || 0) + o.a));
+    const all = expCats().map(c => c.k); [...by.keys()].forEach(k => { if (!all.includes(k)) all.push(k); });
+    all.sort((a, b) => (by.get(b) || 0) - (by.get(a) || 0) || (catLimit(b) ? 1 : 0) - (catLimit(a) ? 1 : 0)); // сначала то, на что тратил
+    h += nav + `<p class="hint" style="margin:0 6px 10px">Нажми на статью, чтобы задать лимит в месяц.</p><div class="list glass">${all.map(k => {
+      const v = by.get(k) || 0, lim = catLimit(k) * per.months, name = (expCats().find(c => c.k === k) || {}).l || EXP[k] || 'Другое';
+      return `<div class="row" data-act="cat-lim" data-k="${esc(k)}" role="button" tabindex="0"><div class="rt"><div class="t1">${esc(name)}</div>
+        ${lim ? `<div class="lim ${v > lim ? 'over' : ''}"><i style="width:${Math.min(100, v / lim * 100)}%"></i></div><div class="t2">${v > lim ? 'перерасход ' + rub(v - lim) : 'осталось ' + rub(lim - v)} из ${rub(lim)}</div>` : `<div class="t2">${outT && v ? Math.round(v / outT * 100) + '% расходов' : 'без лимита'}</div>`}</div>
+        <div class="rr"><div class="amt">${v ? '−' + rub(v) : '—'}</div></div></div>`; }).join('')}</div>`;
+  }
+  if (ana.view === 'acc'){
+    const l = accList();
+    h += `<p class="hint" style="margin:0 6px 10px">${l.length ? 'Остаток = стартовая сумма + что пришло − что потратил (по сегодняшний день).' : 'Заведи счета, если деньги лежат в разных местах — например «Карта» и «Наличные». Тогда будет видно, сколько где.'}</p>`;
+    if (l.length) h += `<div class="list glass">${l.map((a, i) => { const b = accBalance(a); return `<div class="row" data-act="acc-edit" data-id="${a.id}" role="button" tabindex="0">
+      <span class="ic" style="--c:var(--indigo);font:700 14px var(--rounded)">${esc(a.name.slice(0, 1).toUpperCase())}</span>
+      <div class="rt"><div class="t1">${esc(a.name)}${i === 0 && l.length > 1 ? ' <small style="color:var(--fg2);font-weight:500">· основной</small>' : ''}</div><div class="t2">${a.syn ? 'в боте: ' + esc(a.syn) : 'старт ' + rub(a.start || 0)}</div></div>
+      <div class="rr"><div class="amt ${b < 0 ? 'neg' : ''}">${b < 0 ? '−' : ''}${rub(Math.abs(b))}</div></div></div>`; }).join('')}
+      ${l.length > 1 ? `<div class="row"><div class="rt"><div class="t1"><b>Всего</b></div></div><div class="rr"><div class="amt">${rub(l.reduce((s, a) => s + accBalance(a), 0))}</div></div></div>` : ''}</div>`;
+    h += `<div class="actions"><button class="btn tinted" data-act="acc-new">${ICONS.plus}Добавить счёт</button></div>`;
+  }
+  if (ana.view === 'ops'){
+    const q = ana.q.trim().toLowerCase();
+    const list = ops.filter(o => ana.kind === 'all' || o.kind === ana.kind).filter(o => !q || [opTitle(o), opCat(o), opWho(o)].join(' ').toLowerCase().includes(q));
+    h += nav + `<div class="seg" style="margin-bottom:10px">${[['all', 'Все'], ['in', 'Доходы'], ['out', 'Расходы']].map(([k, l]) => `<label><input type="radio" name="ana-k" data-act="ana-kind" value="${k}" ${ana.kind === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
+      <input id="anaQ" type="search" value="${esc(ana.q)}" placeholder="Поиск: клиент, статья, описание" autocomplete="off" style="width:100%;margin-bottom:10px">
+      <div id="anaList">${list.length ? `<div class="list glass">${list.map(opRow).join('')}</div>` : `<div class="empty"><b>Ничего не нашлось</b></div>`}</div>`;
+  }
+  return h;
+}
+function anaSheet(){
+  if (!ana.ym) ana.ym = ui.month;
+  const tabs = [['sum', 'Обзор'], ['months', 'Месяцы'], ['cats', 'Статьи'], ['acc', 'Счета'], ['ops', 'Операции']];
+  const html = `<div class="seg ana-tabs" style="margin-bottom:14px">${tabs.map(([k, l]) => `<label><input type="radio" name="ana-v" data-act="ana-view" value="${k}" ${ana.view === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
+    <div id="anaBody">${anaBody()}</div>
+    <div class="actions"><button class="btn tinted" data-act="ana-export">⬇️ Выгрузить в Excel</button></div>`;
+  const box = $('#ana');
+  if (box && !$('#sheet').hidden) box.innerHTML = html; else openSheet(`${head('Подробная аналитика')}<div id="ana">${html}</div>`);
+  anaSheet.bindQ();
+}
+anaSheet.bindQ = () => { const qi = $('#anaQ'); if (qi) qi.addEventListener('input', () => { ana.q = qi.value; const pos = qi.selectionStart; $('#anaBody').innerHTML = anaBody(); const n = $('#anaQ'); n.focus(); n.setSelectionRange(pos, pos); anaSheet.bindQ(); }); };
+
+// выгрузка в Excel (.xlsx): Операции, По месяцам, По статьям, Счета — за всё время
+function xlsxFile(sheets){
+  const enc = new TextEncoder(), xe = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const col = i => { let s = ''; i++; while (i){ const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+  const sheetXml = rows => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows.map((r, ri) =>
+    `<row r="${ri + 1}">${r.map((v, ci) => { const ref = col(ci) + (ri + 1); return typeof v === 'number' ? `<c r="${ref}"><v>${v}</v></c>` : `<c r="${ref}" t="inlineStr"${ri === 0 ? ' s="1"' : ''}><is><t>${xe(v ?? '')}</t></is></c>`; }).join('')}</row>`).join('')}</sheetData></worksheet>`;
+  const files = [
+    ['[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`],
+    ['_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ['xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s, i) => `<sheet name="${xe(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>`],
+    ['xl/_rels/workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ['xl/styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="2"><xf/><xf fontId="1" applyFont="1"/></cellXfs></styleSheet>`],
+    ...sheets.map((s, i) => ['xl/worksheets/sheet' + (i + 1) + '.xml', sheetXml(s.rows)])];
+  // zip без сжатия: заголовок + данные каждого файла, в конце — оглавление
+  const crcT = Array.from({length: 256}, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc = b => { let c = 0xFFFFFFFF; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const parts = [], dir = []; let off = 0;
+  const u16 = v => [v & 255, (v >>> 8) & 255], u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  for (const [name, text] of files){
+    const nb = enc.encode(name), db = enc.encode(text), c = crc(db);
+    const common = [...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(c), ...u32(db.length), ...u32(db.length), ...u16(nb.length), ...u16(0)];
+    const lh = new Uint8Array([...u32(0x04034b50), ...common]);
+    parts.push(lh, nb, db);
+    dir.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...common, ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), nb);
+    off += lh.length + nb.length + db.length;
+  }
+  const dirLen = dir.reduce((s, b) => s + b.length, 0);
+  const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(dirLen), ...u32(off), ...u16(0)]);
+  return new Blob([...parts, ...dir, end], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+async function exportExcel(){
+  const all = moneyOps('0000', '9999'), dmy = d => d.split('-').reverse().join('.');
+  const ops = [['Дата', 'Тип', 'Сумма', 'Статья / вид', 'Описание', 'Клиент', 'Счёт'],
+    ...all.slice().reverse().map(o => [dmy(o.d), o.kind === 'in' ? 'Доход' : 'Расход', o.kind === 'in' ? o.a : -o.a, opCat(o), opTitle(o), opWho(o), accName(accIdOf(o.x))])];
+  const months = [...new Set(all.map(o => o.d.slice(0, 7)))].sort();
+  const byM = [['Месяц', 'Пришло', 'Ушло', 'Итог'], ...months.map(m => { const o = all.filter(x => x.d.slice(0, 7) === m), i = o.filter(x => x.kind === 'in').reduce((s, x) => s + x.a, 0), e = o.filter(x => x.kind === 'out').reduce((s, x) => s + x.a, 0); return [MONTHS[+m.slice(5) - 1] + ' ' + m.slice(0, 4), i, e, i - e]; })];
+  const cats = [...new Set(all.filter(o => o.kind === 'out').map(o => opCat(o)))];
+  const byC = [['Месяц', ...cats, 'Всего'], ...months.map(m => { const o = all.filter(x => x.kind === 'out' && x.d.slice(0, 7) === m), v = cats.map(c => o.filter(x => opCat(x) === c).reduce((s, x) => s + x.a, 0)); return [MONTHS[+m.slice(5) - 1] + ' ' + m.slice(0, 4), ...v, v.reduce((s, x) => s + x, 0)]; })];
+  const sheets = [{name: 'Операции', rows: ops}, {name: 'По месяцам', rows: byM}, {name: 'Расходы по статьям', rows: byC}];
+  if (accList().length) sheets.push({name: 'Счета', rows: [['Счёт', 'На старте', 'Остаток сейчас'], ...accList().map(a => [a.name, +a.start || 0, accBalance(a)])]});
+  const name = `Фикус-финансы-${today()}.xlsx`, file = new File([xlsxFile(sheets)], name, {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  try { if (navigator.canShare && navigator.canShare({files: [file]})){ await navigator.share({files: [file], title: 'Финансы «Фикус»'}); return; } } catch(e){ if (e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  toast('Файл Excel сохранён — его можно открыть и в Google Таблицах');
+}
 
 // «+»: три раздела — заработок, личное (без денег), учёт; внутри — варианты.
 // Список настраивается: лишнее можно скрыть, своё — добавить (settings.addHide = ['раздел:ключ'], settings.addOwn = {раздел:[{e,t}]}).
@@ -2360,7 +2573,7 @@ async function rest(method, path, body, prefer){
   const txt = await r.text(); return txt ? JSON.parse(txt) : null;
 }
 
-const COLS = ['entries','expenses','clients','subs','packages','templates'];
+const COLS = ['entries','expenses','clients','subs','packages','templates','accounts'];
 function merge(a, b){
   const out = {...a};
   const del = {...(a.deleted||{})};
@@ -3603,6 +3816,19 @@ document.addEventListener('click', ev => {
     case 'new-client': swapSheet(() => clientForm(null)); break;
     case 'new-sub': swapSheet(() => subForm(null, id || '')); break;
     case 'add-exp': swapSheet(() => expenseForm(null)); break;
+    case 'ana': ana.ym = ui.month; ana.view = 'sum'; ana.q = ''; anaSheet(); break;
+    case 'ana-view': ana.view = el.value; anaSheet(); break;
+    case 'ana-year': ana.year = !!el.value; anaSheet(); break;
+    case 'ana-kind': ana.kind = el.value; anaSheet(); break;
+    case 'ana-per': { const k = +el.dataset.k; ana.ym = addMonth(ana.ym, Math.abs(k) === 1 && ana.year ? k * 12 : k); anaSheet(); break; }
+    case 'ana-month': ana.ym = el.dataset.m; ana.year = false; ana.view = 'sum'; anaSheet(); break;
+    case 'ana-export': exportExcel(); break;
+    case 'acc-new': accForm(null); break;
+    case 'acc-edit': accForm((data.accounts || []).find(x => x.id === id)); break;
+    case 'acc-del':
+      if (!armDelete(el)) break;
+      data.accounts = (data.accounts || []).filter(x => x.id !== id); tomb(id); persist(); ana.view = 'acc'; anaSheet(); toast('Счёт удалён — его записи теперь на основном счёте'); break;
+    case 'cat-lim': limitForm(el.dataset.k); break;
     case 'edit': swapSheet(() => entryForm(data.entries.find(e => e.id === id), {occ: el.dataset.occ})); break;
     case 'edit-exp': expenseForm(data.expenses.find(x => x.id === id)); break;
     case 'edit-sub': swapSheet(() => subForm(subById(id))); break;
