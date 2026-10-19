@@ -173,7 +173,11 @@ a{color:inherit;text-decoration:none}
 /* шапка */
 .top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-top:6px}
 .top h1{font:700 34px/1.1 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance}
-.hello{font-size:15px;color:var(--fg2);font-weight:500;margin-bottom:2px}
+.hello{font-size:15px;color:var(--fg2);font-weight:500;margin-bottom:2px;display:flex;align-items:center;gap:6px}
+.refresh-btn{display:inline-grid;place-items:center;width:26px;height:26px;margin:-4px 0;border-radius:50%;color:var(--fg2)}
+.refresh-btn svg{width:16px;height:16px}
+.refresh-btn.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .circle{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex:none}
 .me-btn{flex:none;border-radius:50%;box-shadow:0 6px 16px -6px var(--shadow);transition:transform .2s}
 .me-btn .ava{width:42px;height:42px;font-size:15px;border:2px solid var(--edge)}
@@ -617,7 +621,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.14', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.14.1', tg:'gog_sonn'};
 
 // [женский|мужской] вариант слова и {name} подставляются по профилю
 const PHRASES = [
@@ -772,6 +776,7 @@ const postOn = () => !prof().hide.includes('retouch');
 const prof = () => PROFS[(data.profile && data.profile.profession) || 'photo'] || PROFS.photo;
 const S = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 const ICONS = {
+  refresh:`<svg viewBox="0 0 24 24" ${S}><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>`,
   pin:`<svg viewBox="0 0 24 24" ${S}><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3z"/><path d="M12 14v6"/></svg>`,
   bellOff:`<svg viewBox="0 0 24 24" ${S}><path d="M10.3 20a2 2 0 0 0 3.4 0"/><path d="M6.5 9.5V9a5.5 5.5 0 0 1 9.6-3.6"/><path d="M17.5 10v3.5l1.5 2.5H5l1.5-2.5V12"/><path d="M4 4l16 16"/></svg>`,
   bell:`<svg viewBox="0 0 24 24" ${S}><path d="M10.3 20a2 2 0 0 0 3.4 0"/><path d="M6.5 13.5V9a5.5 5.5 0 0 1 11 0v4.5L19 16H5z"/></svg>`,
@@ -1190,7 +1195,7 @@ function render(){
   // кружок с инициалами вместо шестерёнки — открывает меню (профиль, история, шаблоны, настройки)
   let html = `
     <header class="top">
-      <div><div class="hello">${hello}${myName() ? ', ' + esc(myName()) : ''}${data.profile && data.profile.gender === 'm' ? '' : ' ♥'}</div><h1>${titles[ui.tab]}</h1></div>
+      <div><div class="hello"><span>${hello}${myName() ? ', ' + esc(myName()) : ''}${data.profile && data.profile.gender === 'm' ? '' : ' ♥'}</span><button class="refresh-btn" data-act="refresh" aria-label="Проверить обновление и синхронизировать">${ICONS.refresh}</button></div><h1>${titles[ui.tab]}</h1></div>
       <button class="me-btn" data-act="settings" aria-label="Меню">${myAva()}</button>
     </header>`;
   if (ui.tab === 'money' || ui.tab === 'history') html += `
@@ -3595,7 +3600,25 @@ document.addEventListener('click', ev => {
     }
     case 'goal': swapSheet(goalForm); break;
     case 'settings': settingsSheet(); break;
-    // баннер «только на этом телефоне» — сразу к регистрации в меню
+    case 'refresh': checkUpdate(el); break;
+    // кнопка ↻ в шапке: есть ли новая версия на сайте (без перезапуска приложения) + синхронизация
+async function checkUpdate(btn){
+  if (checkUpdate.busy) return; checkUpdate.busy = true; btn.classList.add('spin');
+  try {
+    const html = await fetch('./?v=' + Date.now(), {cache:'no-store'}).then(r => r.text());
+    const v = (html.match(/version:'([^']+)'/) || [])[1];
+    if (v && v !== APP.version){
+      toast('Есть обновление ' + v + ' — загружаю…', null, true);
+      try { const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } catch(e) {}
+      setTimeout(() => location.reload(), 700);
+      return;
+    }
+    if (session){ sync.state = 'busy'; await syncNow(); }
+    toast('У тебя последняя версия ' + APP.version + (session ? (sync.state === 'ok' ? ' · данные синхронизированы ☁️' : ' · облако сейчас недоступно') : '') );
+  } catch(e){ toast(navigator.onLine === false ? 'Нет интернета' : 'Не получилось проверить, попробуй позже'); }
+  finally { checkUpdate.busy = false; btn.classList.remove('spin'); }
+}
+// баннер «только на этом телефоне» — сразу к регистрации в меню
     case 'signup': settingsSheet.mode = 'up'; settingsSheet(); setTimeout(() => {
       const f = $('#loginForm'); if (!f) return;
       f.scrollIntoView({block:'center', behavior:'smooth'}); setTimeout(() => $('#l-email').focus({preventScroll:true}), 350);
