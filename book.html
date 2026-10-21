@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#f4f1f7">
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>
-/* Онлайн-запись к мастеру «Фикуса»: клиент выбирает услугу, день, время и оставляет контакты.
+/* Онлайн-запись к пользователю «Фикуса» (мастер, фотограф, предприниматель — кто угодно): клиент выбирает услугу, день, время и оставляет контакты.
    Свободные окна и запись — через функцию push (book-info / book-create). Чужие записи сюда не приходят. */
 :root{--bg:#f4f1f7;--card:#fff;--fg:#1c1b22;--fg2:#6e6a78;--line:#e6e1ec;--accent:#ff375f;--grad:linear-gradient(135deg,#ff6a88,#a855f7);--on:#fff;--ok:#1f9d55;--err:#d93025}
 :root[data-g="m"]{--bg:#0c100d;--card:#161c18;--fg:#f2f6f2;--fg2:#97a39a;--line:#26302a;--accent:#b6ff3c;--grad:linear-gradient(135deg,#b6ff3c,#22d3a6);--on:#0b1405}
@@ -82,7 +82,7 @@ async function call(action, body = {}){
 }
 async function load(keep){
   const info = await call('book-info').catch(() => ({error: 'net'}));
-  if (info.error){ $('#app').innerHTML = `<div class="empty"><b>${info.error === 'net' ? 'Нет связи' : 'Онлайн-запись сейчас недоступна'}</b><p>${info.error === 'net' ? 'Проверьте интернет и обновите страницу.' : 'Свяжитесь с мастером напрямую.'}</p></div>`; return; }
+  if (info.error){ $('#app').innerHTML = `<div class="empty"><b>${info.error === 'net' ? 'Нет связи' : 'Онлайн-запись сейчас недоступна'}</b><p>${info.error === 'net' ? 'Проверьте интернет и обновите страницу.' : 'Свяжитесь напрямую с тем, кто прислал ссылку.'}</p></div>`; return; }
   st.info = info;
   if (info.gender === 'm') document.documentElement.dataset.g = 'm';
   document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
@@ -93,12 +93,12 @@ async function load(keep){
 }
 function draw(){
   const i = st.info, s = st.svc, role = i.prof === 'custom' ? i.profName : PROF[i.prof] || i.profName || '';
-  let h = `<div class="who"><div class="ava">${esc((i.name || 'М').slice(0, 1).toUpperCase())}</div><div><h1>${esc(i.name || 'Мастер')}</h1><p>${esc(role ? role + ' · онлайн-запись' : 'Онлайн-запись')}</p></div></div>`;
+  let h = `<div class="who"><div class="ava">${esc((i.name || 'Ф').slice(0, 1).toUpperCase())}</div><div><h1>${esc(i.name || 'Запись')}</h1><p>${esc(role ? role + ' · онлайн-запись' : 'Онлайн-запись')}</p></div></div>`;
   if (i.services.length > 1 || (i.services[0] && i.services[0].id !== 'any')){
     h += `<h2>Услуга</h2><div class="list">${i.services.map(x => `<button class="svc ${s && s.id === x.id ? 'on' : ''}" data-svc="${esc(x.id)}"><div class="n"><b>${esc(x.name)}</b><small>${durTxt(x.dur)}</small></div>${x.price ? `<div class="p">${rub(x.price)}</div>` : ''}</button>`).join('')}</div>`;
   }
   if (s){
-    if (!s.days.length) h += `<div class="empty">Свободных окон пока нет. Загляните позже или свяжитесь с мастером.</div>`;
+    if (!s.days.length) h += `<div class="empty">Свободных окон пока нет. Загляните позже или свяжитесь напрямую.</div>`;
     else {
       if (!st.day || !s.days.some(d => d.date === st.day)) st.day = s.days[0].date;
       const day = s.days.find(d => d.date === st.day);
@@ -115,13 +115,13 @@ function draw(){
         <label for="c">Комментарий</label><textarea id="c" name="comment" rows="2" maxlength="300" placeholder="Необязательно"></textarea>
         <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
         <button class="btn" type="submit">Записаться</button><div class="err" id="err"></div>
-        <p class="note">Нажимая «Записаться», вы передаёте имя и телефон мастеру для связи по записи.</p></form>`;
+        <p class="note">Нажимая «Записаться», вы соглашаетесь, что имя и телефон увидит тот, к кому вы записываетесь, — для связи по записи.</p></form>`;
   }
   h += `<div class="foot">Работает на «Фикус» · <a href="./" target="_blank" rel="noopener">планер дел, клиентов и денег</a></div>`;
   $('#app').innerHTML = h;
   const f = $('#f'); if (f) f.addEventListener('submit', submit);
 }
-const ERR = {name: 'Напишите имя', phone: 'Проверьте номер телефона', slot: 'Выберите время', taken: 'Это время только что заняли — выберите другое', many: 'У вас уже есть две будущие записи. Чтобы изменить, свяжитесь с мастером', busy: 'Сейчас слишком много записей. Попробуйте через час', off: 'Онлайн-запись сейчас выключена', service: 'Услуга больше недоступна', net: 'Нет связи. Проверьте интернет'};
+const ERR = {name: 'Напишите имя', phone: 'Проверьте номер телефона', slot: 'Выберите время', taken: 'Это время только что заняли — выберите другое', many: 'У вас уже есть две будущие записи. Чтобы изменить, свяжитесь напрямую', busy: 'Сейчас слишком много записей. Попробуйте через час', off: 'Онлайн-запись сейчас выключена', service: 'Услуга больше недоступна', net: 'Нет связи. Проверьте интернет'};
 async function submit(ev){
   ev.preventDefault(); if (st.busy) return;
   const fd = new FormData(ev.target), btn = ev.target.querySelector('.btn');
@@ -139,9 +139,9 @@ function done(r){
     'DTSTART:' + d + 'T' + pad(h) + pad(m) + '00', 'DTEND:' + d + 'T' + pad(Math.floor(end / 60)) + pad(end % 60) + '00',
     'SUMMARY:' + s.name + (r.master ? ' — ' + r.master : ''), 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   $('#app').innerHTML = `<div class="done"><div class="big">✅</div><h1>Вы записаны</h1>
-    <p><b>${esc(s.name)}</b><br>${dayLong(r.date)}, ${r.time}${r.master ? '<br>Мастер: ' + esc(r.master) : ''}</p>
+    <p><b>${esc(s.name)}</b><br>${dayLong(r.date)}, ${r.time}${r.master ? '<br>👤 ' + esc(r.master) : ''}</p>
     <a class="btn ghost" style="display:block;text-decoration:none" download="zapis.ics" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}">📅 Добавить в календарь</a>
-    <p class="note" style="margin-top:14px">Мастер уже получил уведомление. Если планы изменятся — предупредите его заранее.</p></div>
+    <p class="note" style="margin-top:14px">${r.master ? esc(r.master) + (st.info && st.info.gender === 'm' ? ' уже получил' : ' уже получила') + ' уведомление' : 'Уведомление уже отправлено'}. Если планы изменятся — предупредите заранее.</p></div>
     <div class="cta"><b>🌿 Тоже работаете с клиентами?</b>
       <p>«Фикус» — для фотографов, видеографов, бьюти-мастеров, предпринимателей и всех, кому важны дела и деньги: календарь, клиенты и финансы в одном месте, онлайн-запись как эта и записи голосом через Telegram.</p>
       <a class="btn" href="./?from=book" target="_blank" rel="noopener" style="display:block;text-decoration:none;text-align:center">Попробовать «Фикус»</a></div>`;
@@ -152,7 +152,7 @@ document.addEventListener('click', ev => {
   else if (b.dataset.day){ st.day = b.dataset.day; st.time = null; draw(); }
   else if (b.dataset.time){ st.time = b.dataset.time; draw(); setTimeout(() => { const n = $('#n'); if (n) n.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 50); }
 });
-if (!/^[a-z0-9]{6,16}$/.test(slug)) $('#app').innerHTML = '<div class="empty"><b>Ссылка неполная</b><p>Попросите мастера прислать ссылку на запись ещё раз.</p></div>';
+if (!/^[a-z0-9]{6,16}$/.test(slug)) $('#app').innerHTML = '<div class="empty"><b>Ссылка неполная</b><p>Попросите прислать ссылку на запись ещё раз.</p></div>';
 else load();
 </script>
 </body>
