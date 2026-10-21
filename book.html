@@ -52,6 +52,10 @@ input:focus,textarea:focus{border-color:var(--accent)}
 .done p{color:var(--fg2);margin:0 0 18px}
 .empty{text-align:center;color:var(--fg2);padding:28px 12px}
 .foot{text-align:center;color:var(--fg2);font-size:12px;margin-top:28px}
+/* после записи: приглашение попробовать «Фикус» самому */
+.cta{margin-top:-14px;padding:18px 16px 16px;border-radius:20px;background:var(--card);border:1px solid var(--line);text-align:left}
+.cta b{display:block;font-size:17px;margin-bottom:6px}
+.cta p{margin:0 0 6px;color:var(--fg2);font-size:15px;line-height:1.4}
 .foot a{color:inherit}
 .spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:sp 1s linear infinite;margin:60px auto}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -137,7 +141,10 @@ function done(r){
   $('#app').innerHTML = `<div class="done"><div class="big">✅</div><h1>Вы записаны</h1>
     <p><b>${esc(s.name)}</b><br>${dayLong(r.date)}, ${r.time}${r.master ? '<br>Мастер: ' + esc(r.master) : ''}</p>
     <a class="btn ghost" style="display:block;text-decoration:none" download="zapis.ics" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}">📅 Добавить в календарь</a>
-    <p class="note" style="margin-top:14px">Мастер уже получил уведомление. Если планы изменятся — предупредите его заранее.</p></div>`;
+    <p class="note" style="margin-top:14px">Мастер уже получил уведомление. Если планы изменятся — предупредите его заранее.</p></div>
+    <div class="cta"><b>🌿 Тоже принимаете клиентов?</b>
+      <p>«Фикус» — планер для мастеров: календарь, клиенты и деньги в одном месте, онлайн-запись как эта и записи голосом через Telegram.</p>
+      <a class="btn" href="./?from=book" target="_blank" rel="noopener" style="display:block;text-decoration:none;text-align:center">Попробовать «Фикус»</a></div>`;
 }
 document.addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b || !st.info) return;
