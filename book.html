@@ -117,7 +117,7 @@ function draw(){
         <button class="btn" type="submit">Записаться</button><div class="err" id="err"></div>
         <p class="note">Нажимая «Записаться», вы передаёте имя и телефон мастеру для связи по записи.</p></form>`;
   }
-  h += `<div class="foot">Работает на «Фикус» · <a href="./" target="_blank" rel="noopener">планер для мастеров</a></div>`;
+  h += `<div class="foot">Работает на «Фикус» · <a href="./" target="_blank" rel="noopener">планер дел, клиентов и денег</a></div>`;
   $('#app').innerHTML = h;
   const f = $('#f'); if (f) f.addEventListener('submit', submit);
 }
@@ -142,8 +142,8 @@ function done(r){
     <p><b>${esc(s.name)}</b><br>${dayLong(r.date)}, ${r.time}${r.master ? '<br>Мастер: ' + esc(r.master) : ''}</p>
     <a class="btn ghost" style="display:block;text-decoration:none" download="zapis.ics" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}">📅 Добавить в календарь</a>
     <p class="note" style="margin-top:14px">Мастер уже получил уведомление. Если планы изменятся — предупредите его заранее.</p></div>
-    <div class="cta"><b>🌿 Тоже принимаете клиентов?</b>
-      <p>«Фикус» — планер для мастеров: календарь, клиенты и деньги в одном месте, онлайн-запись как эта и записи голосом через Telegram.</p>
+    <div class="cta"><b>🌿 Тоже работаете с клиентами?</b>
+      <p>«Фикус» — для фотографов, видеографов, бьюти-мастеров, предпринимателей и всех, кому важны дела и деньги: календарь, клиенты и финансы в одном месте, онлайн-запись как эта и записи голосом через Telegram.</p>
       <a class="btn" href="./?from=book" target="_blank" rel="noopener" style="display:block;text-decoration:none;text-align:center">Попробовать «Фикус»</a></div>`;
 }
 document.addEventListener('click', ev => {

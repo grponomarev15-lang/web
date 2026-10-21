@@ -1,5 +1,5 @@
 // Офлайн-режим: сначала сеть (чтобы обновления приходили сами), без сети — из кэша.
-const CACHE = 'kadr-v42';
+const CACHE = 'kadr-v43';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './apple-touch-icon-m.png', './icon-m-192.png', './icon-m-512.png'];
 
 self.addEventListener('install', e => {
