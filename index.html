@@ -638,7 +638,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.18.0', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.18.1', tg:'gog_sonn'};
 // открыто внутри Telegram (мини-апп): Telegram передаёт подпись в #tgWebAppData; запоминаем на сессию — перезагрузка не теряет
 const IN_TG = (() => {
   const hit = /tgWebAppData=/.test(location.hash) || /[?&]tg=1/.test(location.search);
@@ -1523,9 +1523,9 @@ function renderHome(){
   h += todayList.length ? prioList(todayList)
     : `<button class="card glass empty" data-act="new-on" data-d="${t}" style="padding:18px;width:100%"><b style="font-size:16px">Сегодня свободно</b><p>Нажми, чтобы что-то запланировать</p></button>`;
 
-  // ближайшее — следующие 5 записей после сегодня
+  // ближайшее — следующие 5 записей после сегодня; повторяющиеся дела сюда не попадают — они напоминалки, а не планы
   const seen = new Set();
-  const next = expandEntries(shiftDay(t, 1), shiftDay(t, 120)).filter(e => !(checkable(e) && e.done))
+  const next = expandEntries(shiftDay(t, 1), shiftDay(t, 120)).filter(e => !(checkable(e) && e.done) && !isRepeat(e))
     .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))
     .filter(e => !seen.has(e.id) && seen.add(e.id)).slice(0, 5);
   if (next.length) h += `<div class="section-title">Ближайшее</div><div class="list glass">${next.map(e => entryRow(e, {showDate:true})).join('')}</div>`;
