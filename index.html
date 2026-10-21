@@ -649,7 +649,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.19.0', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.20.0', tg:'gog_sonn'};
 // открыто внутри Telegram (мини-апп): Telegram передаёт подпись в #tgWebAppData; запоминаем на сессию — перезагрузка не теряет
 const IN_TG = (() => {
   const hit = /tgWebAppData=/.test(location.hash) || /[?&]tg=1/.test(location.search);
@@ -1322,6 +1322,10 @@ const WD_SHORT = ['пн','вт','ср','чт','пт','сб','вс'];
 const weekStart = s => { const d = parseD(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return dstr(d); };
 const toMin = t => { const [h,m] = t.split(':').map(Number); return h*60 + m; };
 const hhmm = m => pad(Math.floor(m/60) % 24) + ':' + pad(m % 60);
+// своё напоминание у записи: минут до начала (пусто — как в настройках: накануне вечером и за 2 часа)
+const REMINDS = [['', 'Как обычно'], [0, 'В начале'], [5, 'За 5 минут'], [10, 'За 10 минут'], [15, 'За 15 минут'], [30, 'За 30 минут'], [60, 'За 1 час'], [120, 'За 2 часа'], [180, 'За 3 часа'], [1440, 'За день']];
+const remLabel = m => m === 0 ? 'В начале' : m === 1440 ? 'За день' : m % 60 === 0 && m < 1440 ? `За ${m / 60} ч` : `За ${m} мин`;
+const remindOpts = cur => cur === undefined || cur === null || REMINDS.some(([v]) => String(v) === String(cur)) ? REMINDS : [...REMINDS, [cur, remLabel(+cur)]];
 const DURS = [[30,'30 мин'],[60,'1 час'],[90,'1,5 часа'],[120,'2 часа'],[180,'3 часа'],[240,'4 часа'],[360,'6 часов'],[480,'8 часов'],[720,'12 часов']];
 const durOf = e => +e.dur || 60;
 // ---------- повторяющиеся дела ----------
@@ -2091,6 +2095,7 @@ function entryForm(e, preset = {}){
         <div class="field"><label for="f-date" id="l-date">${e.type==='retouch'?'Сдать до':'Дата'}</label><input type="date" id="f-date" name="date" value="${esc(e.date)}" required></div>
         <div class="field" id="timeField"><label for="f-time" id="l-time">${e.type==='retouch'?'Сдать к':'Время'}</label>${timePicker('f-time', 'time', e.time || '')}</div>
         <div class="field" id="durField" ${e.type==='retouch'?'hidden':''}><label for="f-dur">Длительность</label><select id="f-dur" name="dur">${DURS.map(([v,l]) => `<option value="${v}" ${durOf(e)===v?'selected':''}>${l}</option>`).join('')}</select></div>
+        <div class="field" id="remField"><label for="f-rem">Напомнить</label><select id="f-rem" name="remind">${remindOpts(e.remind).map(([v, l]) => `<option value="${v}" ${String(e.remind ?? '') === String(v) ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       </div>
       <div class="form" id="repeatBox" ${e.type === 'task' ? '' : 'hidden'}>
         <div class="field"><label for="f-rep">Повтор</label><select id="f-rep" name="repeat">${REPEATS.map(([v,l]) => `<option value="${v}" ${(e.repeat && e.repeat.f || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
@@ -2224,6 +2229,7 @@ function entryForm(e, preset = {}){
       prio: +fd.get('prio') || 0, emoji: fd.get('emoji') || '',
       status: fd.get('status') || undefined, refund: fd.get('status') && fd.get('refund') ? true : undefined,
       dur: type === 'retouch' ? undefined : +fd.get('dur') || 60,
+      remind: fd.get('remind') === '' || fd.get('remind') === null ? undefined : +fd.get('remind'), // своё напоминание, минут до начала
       format: type === 'lesson' ? fd.get('f-format') : undefined,
       subId: subId || undefined,
       amount, prepaid, paid: !!fd.get('paid') || (amount > 0 && prepaid >= amount), acc: fd.get('acc') || e.acc || undefined,
