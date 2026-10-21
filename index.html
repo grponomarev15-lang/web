@@ -217,6 +217,17 @@ a{color:inherit;text-decoration:none}
 .lim.over i{background:var(--red)}
 .mb i.in{background:var(--green)} .mb i.out{background:var(--orange)}
 .amt.pos{color:var(--green)}
+/* обучение при первом запуске: подсветка кнопки + карточка «что это · коротко · куда нажать» */
+.tour{position:fixed;inset:0;z-index:300}
+.tour-hole{position:fixed;display:none;border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.62);outline:2px solid rgba(255,255,255,.85);outline-offset:2px;pointer-events:none;transition:left .35s,top .35s,width .35s,height .35s}
+.tour-card{position:fixed;left:16px;right:16px;max-width:420px;margin:0 auto;background:var(--glass-strong);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:1px solid var(--edge);border-radius:22px;padding:18px 18px 12px;color:var(--fg);box-shadow:0 18px 50px var(--shadow)}
+.tour-card .k{font-size:12px;color:var(--fg2);margin-bottom:6px}
+.tour-card b{display:block;font:700 20px/1.2 var(--display);margin-bottom:6px}
+.tour-card p{margin:0;color:var(--fg2);font-size:15px;line-height:1.4}
+.tour-card .where{font-size:14px;margin:10px 0 0}
+.tour-card .row2{display:flex;gap:10px;align-items:center;margin-top:14px}
+.tour-card .skip{background:none;border:0;color:var(--fg2);font:inherit;font-size:15px;padding:10px 4px;cursor:pointer;text-decoration:none}
+.tour-card .next{margin-left:auto;padding:12px 22px;border-radius:14px;border:0;background:var(--grad);color:var(--on-grad);font:600 16px var(--rounded);cursor:pointer}
 .phrase{display:flex;gap:12px;align-items:center;text-align:left;width:100%}
 #app .list .row[data-act="edit"]{-webkit-user-select:none;user-select:none} /* свайп мышкой не выделяет текст */
 .phrase .spark{width:38px;height:38px;border-radius:12px;flex:none;display:grid;place-items:center;color:var(--on-grad);background:var(--grad)}
@@ -638,7 +649,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.18.1', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.19.0', tg:'gog_sonn'};
 // открыто внутри Telegram (мини-апп): Telegram передаёт подпись в #tgWebAppData; запоминаем на сессию — перезагрузка не теряет
 const IN_TG = (() => {
   const hit = /tgWebAppData=/.test(location.hash) || /[?&]tg=1/.test(location.search);
@@ -3047,6 +3058,7 @@ function settingsSheet(){
       ${menu('book', ICONS.cal, 'var(--green)', 'Онлайн-запись', bookCfgApp().on ? 'Включена · ссылка для клиентов' : 'Клиенты записываются сами по ссылке')}
       ${menu('pkgs', ICONS.expense, 'var(--orange)', 'Прайс-лист', data.packages.length ? data.packages.length + ' ' + plural(data.packages.length,'услуга','услуги','услуг') : 'Цены подставляются в записи')}
       ${menu('templates', ICONS.chat, 'var(--teal)', 'Шаблоны сообщений', data.templates.length + ' ' + plural(data.templates.length,'шаблон','шаблона','шаблонов'))}
+      ${menu('tour', ICONS.spark, 'var(--teal)', 'Как пользоваться', 'Коротко: где что на экране')}
       ${menu('feedback', ICONS.spark, 'var(--indigo)', 'Сообщить о проблеме', 'Ошибка, идея или что-то неудобно')}
       ${menu('privacy', ICONS.client, 'var(--gray)', 'Политика конфиденциальности', 'Какие данные храним и как удалить')}
     </div>
@@ -3304,6 +3316,57 @@ function packageForm(p){
     if (isNew) data.packages.push(rec); else data.packages[data.packages.findIndex(x => x.id === p.id)] = rec;
     persist(); toast('Сохранено'); swapSheet(packagesSheet);
   });
+}
+
+/* ---------- обучение при первом запуске: «что это · коротко · куда нажать» с подсветкой кнопки ---------- */
+function tourSteps(){
+  const p = prof();
+  return [
+    {sel: '.fab', t: 'Новая запись', d: `${p.unit.manyCap}, личные дела и расходы добавляются здесь. Сумма из записи сама станет доходом.`, w: 'Кнопка «+» внизу по центру'},
+    {sel: '#tab-plan', t: 'Календарь', d: 'Все записи по дням, неделям и месяцам. Свободные окна видно сразу.', w: 'Вкладка «Календарь» внизу'},
+    {sel: '#tab-clients', t: 'Клиенты', d: 'Появляются сами, когда пишешь имя в записи. Здесь история, долги и абонементы.', w: 'Вкладка «Клиенты» внизу'},
+    {sel: '#tab-money', t: 'Деньги', d: 'Доход, ожидаемые оплаты и расходы. Внутри — подробная аналитика и выгрузка в Excel.', w: 'Вкладка «Деньги» внизу'},
+    {sel: '.me-btn', t: 'Меню', d: 'Профиль, онлайн-запись для клиентов, прайс-лист, напоминания, облако и Telegram.', w: 'Аватарка справа вверху'},
+    {sel: null, t: 'Записывай голосом', d: 'Telegram-бот @ficuss_bot: напиши или надиктуй «завтра в 15 съёмка Аня 12000» — запись появится здесь.', btn: ['Открыть бота', 'https://t.me/ficuss_bot']},
+  ];
+}
+function startTour(){
+  if (document.querySelector('.tour') || document.querySelector('.onb')) return;
+  if (sheetOpen()) closeSheet();
+  if (ui.tab !== 'home'){ ui.tab = 'home'; render(); }
+  const steps = tourSteps(); let i = 0;
+  const el = document.createElement('div'); el.className = 'tour'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
+  el.innerHTML = `<div class="tour-hole"></div><div class="tour-card" aria-live="polite"></div>`;
+  document.body.appendChild(el);
+  const hole = el.querySelector('.tour-hole'), card = el.querySelector('.tour-card'), last = () => i === steps.length - 1;
+  const done = () => {
+    el.remove(); removeEventListener('resize', draw);
+    if (!data.settings.tourDone){ data.settings = {...data.settings, tourDone: Date.now()}; data.settingsU = Date.now(); persist(); }
+  };
+  function draw(){
+    const st = steps[i], target = st.sel && document.querySelector(st.sel);
+    card.innerHTML = `<div class="k">${i + 1} из ${steps.length}</div><b>${esc(st.t)}</b><p>${esc(st.d)}</p>${st.w ? `<div class="where">👉 ${esc(st.w)}</div>` : ''}
+      <div class="row2">${last() ? '' : '<button class="skip" data-t="skip">Пропустить</button>'}${st.btn ? `<a class="skip" href="${st.btn[1]}" target="_blank" rel="noopener" style="color:var(--accent)">${st.btn[0]}</a>` : ''}
+      <button class="next" data-t="next">${last() ? 'Понятно' : 'Далее'}</button></div>`;
+    if (target){
+      const r = target.getBoundingClientRect(), pad = 6, round = getComputedStyle(target).borderRadius;
+      Object.assign(hole.style, {display: 'block', left: r.left - pad + 'px', top: r.top - pad + 'px', width: r.width + pad * 2 + 'px', height: r.height + pad * 2 + 'px', borderRadius: /50%|999/.test(round) ? '999px' : '18px'});
+      const below = r.top < innerHeight / 2; // кнопка вверху — карточка под ней, внизу — над ней
+      card.style.top = below ? r.bottom + 18 + 'px' : 'auto';
+      card.style.bottom = below ? 'auto' : innerHeight - r.top + 18 + 'px';
+    } else {
+      hole.style.display = 'none'; el.style.background = 'rgba(0,0,0,.62)';
+      card.style.top = 'auto'; card.style.bottom = 'calc(env(safe-area-inset-bottom, 0px) + 120px)';
+    }
+  }
+  el.addEventListener('click', ev => {
+    ev.stopPropagation(); // нажатия по затемнению не доходят до приложения
+    const b = ev.target.closest('[data-t]'); if (!b) return;
+    if (b.dataset.t === 'skip' || last()){ done(); return; }
+    i++; draw();
+  });
+  addEventListener('resize', draw);
+  draw();
 }
 
 /* ---------- онлайн-запись: клиенты сами выбирают услугу и свободное время по ссылке (book.html) ---------- */
@@ -3572,7 +3635,7 @@ function onboarding(){
     el.classList.add('hide'); setTimeout(() => el.remove(), 500);
     render();
     if (calSrc) calImportSheet(calSrc);
-    else toast(g(`Добро пожаловать${st.name.trim() ? ', ' + st.name.trim() : ''}! Нажми «+», чтобы добавить первую запись`));
+    else setTimeout(startTour, 700); // короткое обучение: куда нажимать
   };
   el.addEventListener('click', ev => {
     const b = ev.target.closest('[data-ob]'); if (!b) return;
@@ -4045,6 +4108,7 @@ async function checkUpdate(btn){
     case 'recap': swapSheet(() => recapSheet(el.dataset.m)); break;
     case 'pkgs': swapSheet(packagesSheet); break;
     case 'book': swapSheet(bookSheet); break;
+    case 'tour': closeSheet(); setTimeout(startTour, 350); break;
     case 'book-login': loginSheet(() => bookSheet()); break;
     case 'book-copy': { const u = bookUrl(bookCfgApp()); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast('Ссылка скопирована'), () => toast(u)); break; }
     case 'book-share': { const u = bookUrl(bookCfgApp()); if (navigator.share) navigator.share({title: 'Онлайн-запись', text: 'Записаться ко мне можно здесь:', url: u}).catch(() => {}); else navigator.clipboard.writeText(u).then(() => toast('Ссылка скопирована')); break; }
@@ -4164,6 +4228,8 @@ render();
 if (checkRecovery()) $('#splash').hidden = true;
 else if (IN_TG && !session){ $('#splash').hidden = true; tgAppStart(); } // мини-апп: сначала тихий вход, потом (если надо) знакомство
 else if (!data.profile){ $('#splash').hidden = true; onboarding(); } else { showSplash(); setTimeout(askOverdue, 3300); }
+// новичок, у которого профиль заведён ботом или пришёл из облака: обучение один раз (у давних пользователей записей много — им не показываем)
+if (data.profile && !data.settings.tourDone && data.entries.length <= 3) setTimeout(() => { if (!data.settings.tourDone && !sheetOpen()) startTour(); }, 3800);
 if (IN_TG && session) tgAppStart();
 setTimeout(resumeTg, 600);
 syncNow();
