@@ -649,7 +649,7 @@ a{color:inherit;text-decoration:none}
 
 /* ---------- справочники ---------- */
 // название и версия — меняются в одном месте (попадают в итоги месяца и отзывы)
-const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.20.0', tg:'gog_sonn'};
+const APP = {name:'Фикус', tagline:'планер для фотографов', version:'1.21.0', tg:'gog_sonn'};
 // открыто внутри Telegram (мини-апп): Telegram передаёт подпись в #tgWebAppData; запоминаем на сессию — перезагрузка не теряет
 const IN_TG = (() => {
   const hit = /tgWebAppData=/.test(location.hash) || /[?&]tg=1/.test(location.search);
@@ -943,6 +943,9 @@ function applyTheme(gender, look){
   const ati = document.querySelector('link[rel="apple-touch-icon"]'), fav = document.querySelector('link[rel="icon"]');
   if (ati) ati.href = m ? 'apple-touch-icon-m.png' : 'apple-touch-icon.png';
   if (fav) fav.href = m ? 'icon-m-192.png' : 'icon-192.png';
+  // Android берёт иконку и цвета из манифеста при установке — у темы «он» свой, зелёный
+  const mf = document.querySelector('link[rel="manifest"]');
+  if (mf && !mf.href.endsWith(m ? 'manifest-m.webmanifest' : '/manifest.webmanifest')) mf.href = m ? 'manifest-m.webmanifest' : 'manifest.webmanifest';
 }
 const lookPreview = () => `<div class="lp" aria-hidden="true"><i></i><i></i><i></i><div class="lp-in">
   <div class="lp-h"><b>Главная</b><span></span></div><div class="lp-row"><div class="lp-c"></div><div class="lp-c"></div></div>
@@ -1993,13 +1996,23 @@ function drawChart(){
   el.innerHTML = svg + `</svg>`;
 }
 
+// Android (Chrome и др.): браузер сам предлагает установку — ловим это событие и ставим по нашей кнопке, одним нажатием
+let installPrompt = null;
+addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); installPrompt = ev; if (ui.tab === 'home') render(); });
+addEventListener('appinstalled', () => { installPrompt = null; toast('Фикус установлен — открывай его с главного экрана ✨'); render(); });
+const isAndroid = () => /Android/i.test(navigator.userAgent);
 function installBanner(){
   const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   let hidden = false; try { hidden = localStorage.getItem('kadr.installHidden') === '1'; } catch(e) {}
-  if (IN_TG || standalone || hidden || !/iPhone|iPad|iPod/.test(navigator.userAgent)) return '';
-  return `<div class="card glass install"><span class="ic" style="--c:var(--accent)">${ICONS.share}</span>
-    <p><b>Установи как приложение</b>Нажми «Поделиться» внизу Safari, затем «На экран „Домой“».</p>
+  if (IN_TG || standalone || hidden) return '';
+  const card = (body, btn) => `<div class="card glass install"><span class="ic" style="--c:var(--accent)">${ICONS.share}</span>
+    <p><b>Установи как приложение</b>${body}</p>${btn || ''}
     <button class="x" data-act="hide-install" aria-label="Скрыть">×</button></div>`;
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent)) return card('Нажми «Поделиться» внизу Safari, затем «На экран „Домой“».');
+  if (!isAndroid()) return '';
+  // браузер умеет ставить сам — одна кнопка; не умеет (Яндекс, Samsung) — подсказка, где это в меню
+  return installPrompt ? card('Значок на главном экране, открывается без браузера — как обычное приложение.', `<button class="btn primary" data-act="install-android" style="margin-top:10px;width:auto;padding:10px 18px">Установить</button>`)
+    : card('Открой меню браузера ⋮ и выбери «Установить приложение» или «Добавить на главный экран».');
 }
 
 /* ---------- шторка ---------- */
@@ -4169,6 +4182,11 @@ async function checkUpdate(btn){
     case 'import': $('#importFile').click(); break;
     case 'open-month': ui.month = el.dataset.m; ui.tab = 'money'; render(); scrollTo({top:0}); break;
     case 'hide-install': try{localStorage.setItem('kadr.installHidden','1')}catch(e){} render(); break;
+    case 'install-android':
+      if (!installPrompt){ toast('Открой меню браузера ⋮ → «Установить приложение»'); break; }
+      installPrompt.prompt();
+      installPrompt.userChoice.then(r => { if (r && r.outcome === 'accepted') installPrompt = null; render(); }).catch(() => {});
+      break;
     case 'close': userClose(); break;
     case 'del-entry': case 'del-exp':
       if (!armDelete(el)) break;

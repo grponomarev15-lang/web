@@ -1,0 +1,41 @@
+{
+  "name": "Фикус — планер записей и клиентов",
+  "short_name": "Фикус",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#07090a",
+  "theme_color": "#07090a",
+  "icons": [
+    {
+      "src": "icon-m-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-m-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-m-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-m-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "apple-touch-icon-m.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

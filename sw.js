@@ -1,6 +1,6 @@
 // Офлайн-режим: сначала сеть (чтобы обновления приходили сами), без сети — из кэша.
-const CACHE = 'kadr-v45';
-const ASSETS = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './apple-touch-icon-m.png', './icon-m-192.png', './icon-m-512.png'];
+const CACHE = 'kadr-v46';
+const ASSETS = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './apple-touch-icon-m.png', './icon-m-192.png', './icon-m-512.png', './manifest-m.webmanifest', './icon-maskable-192.png', './icon-maskable-512.png', './icon-m-maskable-192.png', './icon-m-maskable-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
